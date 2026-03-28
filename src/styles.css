@@ -1,3 +1,4 @@
+/* ── Core ── */
 @keyframes starTwinkle { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
 @keyframes planetPulse { 0%,100%{opacity:.6} 50%{opacity:1} }
 @keyframes planetFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
@@ -7,6 +8,7 @@
 @keyframes entityBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
 @keyframes slideIn { from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1} }
 
+/* ── Hyperspace ── */
 @keyframes hyperspaceStretch {
   0% { height: 2px; opacity: 0; }
   15% { opacity: 1; }
@@ -17,12 +19,16 @@
   80% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* ── Saber slash ── */
 @keyframes saberSlash {
   0% { transform: rotate(-35deg) scaleX(0); opacity: 0; }
   15% { opacity: 1; }
   50% { transform: rotate(-35deg) scaleX(1); opacity: 1; }
   100% { transform: rotate(-35deg) scaleX(1.3); opacity: 0; }
 }
+
+/* ── Grand Master ── */
 @keyframes grandMasterGlow {
   0%,100% { text-shadow: 0 0 20px #FFE06633, 0 0 40px #FFE06611; }
   50% { text-shadow: 0 0 30px #FFE06666, 0 0 60px #FFE06644, 0 0 90px #FFE06622; }
@@ -32,6 +38,127 @@
   to { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
 }
 
+/* ── Screen shake (boss attacks) ── */
+@keyframes screenShake {
+  0%,100% { transform: translate(0,0); }
+  10% { transform: translate(-6px, 3px); }
+  20% { transform: translate(6px, -4px); }
+  30% { transform: translate(-5px, -2px); }
+  40% { transform: translate(5px, 3px); }
+  50% { transform: translate(-4px, 2px); }
+  60% { transform: translate(4px, -2px); }
+  70% { transform: translate(-3px, 4px); }
+  80% { transform: translate(3px, -3px); }
+  90% { transform: translate(-2px, -2px); }
+}
+
+/* ── Boss attack lunge ── */
+@keyframes bossLunge {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(40px) scale(1.5); }
+  65% { transform: translateY(20px) scale(1.25); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* ── Boss hit recoil ── */
+@keyframes bossRecoil {
+  0% { transform: translateY(0) scale(1); filter: brightness(1); }
+  25% { transform: translateY(-30px) scale(0.75); filter: brightness(4); }
+  60% { transform: translateY(-12px) scale(0.9); filter: brightness(1.5); }
+  100% { transform: translateY(0) scale(1); filter: brightness(1); }
+}
+
+/* ── Boss defeat explosion ── */
+@keyframes bossDefeatSpin {
+  0% { transform: scale(1) rotate(0deg); opacity: 1; filter: brightness(1); }
+  40% { transform: scale(1.8) rotate(180deg); opacity: 0.9; filter: brightness(4); }
+  70% { transform: scale(0.5) rotate(300deg); opacity: 0.5; filter: brightness(2); }
+  100% { transform: scale(0) rotate(400deg); opacity: 0; filter: brightness(6); }
+}
+
+/* ── Sparks burst from hit ── */
+@keyframes sparkBurst {
+  0% { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+/* ── Expanding explosion rings ── */
+@keyframes explosionRing {
+  0% { transform: scale(0.2); opacity: 0.9; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+/* ── Screen flash overlay ── */
+@keyframes flashOverlay {
+  0% { opacity: 0; }
+  12% { opacity: 0.35; }
+  100% { opacity: 0; }
+}
+
+/* ── Nebula background drift ── */
+@keyframes nebulaDrift {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(20px, -12px) scale(1.04); }
+  66% { transform: translate(-14px, 16px) scale(0.96); }
+}
+@keyframes nebulaDrift2 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(-18px, 10px) scale(0.97); }
+  66% { transform: translate(12px, -14px) scale(1.03); }
+}
+
+/* ── Ambient floating particles ── */
+@keyframes particleFloat {
+  0%,100% { transform: translateY(0) translateX(0); opacity: 0.15; }
+  50% { transform: translateY(-18px) translateX(5px); opacity: 0.4; }
+}
+
+/* ── Boss taunt text ── */
+@keyframes tauntAppear {
+  0% { opacity: 0; transform: translateY(8px) scale(0.9); }
+  15% { opacity: 1; transform: translateY(0) scale(1); }
+  80% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-8px) scale(0.9); }
+}
+
+/* ── Lightning flicker ── */
+@keyframes lightningFlicker {
+  0%,100% { opacity: 0; }
+  4% { opacity: 0.9; }
+  8% { opacity: 0; }
+  12% { opacity: 1; }
+  16% { opacity: 0; }
+  55% { opacity: 0; }
+  59% { opacity: 0.7; }
+  63% { opacity: 0; }
+}
+
+/* ── Danger pulse for low force ── */
+@keyframes dangerPulse {
+  0%,100% { box-shadow: 0 0 0 transparent; }
+  50% { box-shadow: 0 0 20px #EE444444, inset 0 0 30px #EE444411; }
+}
+
+/* ── Boss idle rage pulse (applied via inline style) ── */
+@keyframes bossPulse {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* ── Victory burst ── */
+@keyframes victoryBurst {
+  0% { transform: scale(0); opacity: 1; }
+  60% { transform: scale(2.5); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+/* ── Encounter slide up ── */
+@keyframes encounterAppear {
+  0% { opacity: 0; transform: scale(0.95) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Base styles ── */
 * { box-sizing: border-box; }
 body { margin: 0; padding: 0; background: #05050F; }
 input::placeholder { color: #33335588; }
