@@ -34,8 +34,9 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
     const d = genMap(pi, words);
     setMap(d);
     setEnts(d.entities);
-    setPos({ x: 0, y: GS - 1 });
-    posRef.current = { x: 0, y: GS - 1 };
+    const sp = d.spawn || { x: 0, y: GS - 1 };
+    setPos(sp);
+    posRef.current = sp;
   }, [pi, words]);
 
   useEffect(() => {
