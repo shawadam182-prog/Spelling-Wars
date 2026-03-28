@@ -13,7 +13,13 @@ import Keyboard from "./Keyboard";
 const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 
 const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
-  const [round, setRound] = useState(0);
+  // Queue-based word system: failed words go back to end of queue
+  const allWords = useMemo(() => [...words].sort(() => Math.random() - 0.5).slice(0, boss.hp), [words, boss.hp]);
+  const [queue, setQueue] = useState(allWords);
+  const [completed, setCompleted] = useState([]);
+  const [retries, setRetries] = useState(new Set());
+  const [wordTick, setWordTick] = useState(0); // triggers word change effects
+
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState(null);
   const [hp, setHp] = useState(boss.hp);
@@ -37,8 +43,8 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const inp = useRef(null);
   const timerRef = useRef(null);
   const timers = useRef([]);
-  const bw = useMemo(() => [...words].sort(() => Math.random() - 0.5).slice(0, boss.hp), [words, boss.hp]);
-  const cw = bw[round];
+  const cw = queue[0];
+  const isRetry = cw ? retries.has(cw) : false;
   const sn = useMemo(() => (cw ? sent(cw) : { masked: "", full: "" }), [cw]);
 
   const rage = 1 - hp / boss.hp;
@@ -97,7 +103,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
     if (phase === "fight" && cw) {
       timerRef.current = after(() => { say(cw); inp.current?.focus(); }, 400);
     }
-  }, [round, phase, cw]);
+  }, [wordTick, phase, cw]);
 
   const useHint = () => {
     if (result || phase !== "fight") return;
@@ -132,22 +138,34 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
       after(() => { setBossAnim("idle"); setShowSlash(false); }, 600);
       timerRef.current = after(() => {
         if (nh <= 0) {
+          setCompleted((p) => [...p, cw]);
           sfx("explode"); sfx("win");
           setBossAnim("defeat"); triggerSparks(24, "#FFE066"); triggerRings(4, "#FFE066"); doFlash("white", 800);
           after(() => setPhase("win"), 1500);
         } else {
-          setRound((r) => r + 1); setTyped(""); setResult(null);
+          setCompleted((p) => [...p, cw]);
+          setQueue((q) => q.slice(1));
+          setWordTick((t) => t + 1);
+          setTyped(""); setResult(null);
           setHintsUsed(0); setRevealed(new Set());
         }
       }, 1200);
     } else {
       setResult("no"); sfx("attack"); setSk((k) => k + 1);
       setBossAnim("lunge"); doShake(500); doFlash("red", 600); doTaunt();
-      const nf = force - 1; setForce(nf);
-      logSpellingAttempt(profile.username, cw, false, { level: profile.level, isBossBattle: true });
+      // Retries: no Force drain (they already saw the answer)
+      const drain = isRetry ? 0 : 1;
+      const nf = force - drain; if (drain > 0) setForce(nf);
+      logSpellingAttempt(profile.username, cw, false, { level: profile.level, isBossBattle: true, isRetry });
       after(() => setBossAnim("idle"), 700);
       if (nf <= 0) timerRef.current = after(() => setPhase("lose"), 1200);
-      else timerRef.current = after(() => { setTyped(""); setResult(null); setHintsUsed(0); setRevealed(new Set()); inp.current?.focus(); }, 1800);
+      else timerRef.current = after(() => {
+        // Re-queue: move failed word to end
+        setRetries((r) => new Set([...r, cw]));
+        setQueue((q) => [...q.slice(1), q[0]]);
+        setWordTick((t) => t + 1);
+        setTyped(""); setResult(null); setHintsUsed(0); setRevealed(new Set()); inp.current?.focus();
+      }, 1800);
     }
   };
 
@@ -202,7 +220,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
         <h1 style={{ fontSize: 34, fontWeight: 900, color: "#EE4444", letterSpacing: 4, margin: "8px 0", textShadow: "0 0 30px #EE444466, 0 0 60px #EE444422" }}>{boss.name.toUpperCase()}</h1>
         <p style={{ fontSize: 15, color: "#EE666688", fontStyle: "italic", maxWidth: 320, margin: "0 auto" }}>"{boss.q}"</p>
         <div style={{ marginTop: 24, fontSize: 13, color: "#AAA", letterSpacing: 1 }}>Spell <b style={{ color: "#FFE066" }}>{boss.hp}</b> words to defeat them!</div>
-        <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>You have <b style={{ color: saber.c }}>{bossMaxForce} Force</b> — each miss drains one!</div>
+        <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>You have <b style={{ color: saber.c }}>{bossMaxForce} Force</b> — missed words return for retry!</div>
       </div>
     </div>
   );
@@ -266,7 +284,15 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
       <div style={{ position: "relative", zIndex: 10, padding: "12px 16px", borderBottom: "1px solid #2a1a1a" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div style={{ fontSize: 12, color: "#EE6666", fontWeight: 700, letterSpacing: 1 }}>{boss.icon} {boss.name.toUpperCase()}</div>
-          <div style={{ fontSize: 12, color: "#888" }}>Round {round + 1}/{boss.hp}</div>
+          <div style={{ fontSize: 12, color: "#888" }}>Words: {completed.length}/{boss.hp}</div>
+        </div>
+        {/* Word progress dots */}
+        <div style={{ display: "flex", gap: 4, justifyContent: "center", marginBottom: 6, flexWrap: "wrap" }}>
+          {allWords.map((w, i) => {
+            const done = completed.includes(w);
+            const current = w === cw && !done;
+            return <div key={i} title={done ? w : "?"} style={{ width: 10, height: 10, borderRadius: "50%", background: done ? "#44CC44" : current ? "#FFE066" : "#333", border: `1px solid ${done ? "#44CC4466" : current ? "#FFE06666" : "#444"}`, boxShadow: current ? "0 0 6px #FFE06666" : "none", animation: current ? "planetPulse 1s infinite" : "none" }} />;
+          })}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 11, color: "#EE6666", fontFamily: "monospace" }}>BOSS</span>
@@ -283,6 +309,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "10px 20px", position: "relative", zIndex: 10 }}>
         <div style={{ fontSize: bossSize, marginBottom: 12, filter: `drop-shadow(0 0 ${10 + rage * 20}px #EE4444${Math.round(50 + rage * 100).toString(16).padStart(2,"0")})`, transition: "font-size .3s, filter .3s", ...bossAnimStyle }}>{boss.icon}</div>
 
+        {isRetry && !result && <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 3, color: "#FFE066", marginBottom: 4, animation: "fadeSlideUp .3s" }}>RETRY!</div>}
         <div style={{ fontSize: 15, color: "#AABB", textAlign: "center", maxWidth: 400, lineHeight: 1.6, marginBottom: 12 }}>{result === "ok" ? sn.full : sn.masked}</div>
 
         {/* Action buttons */}
@@ -297,7 +324,10 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
         <div key={sk} style={{ marginBottom: 8, animation: result === "no" ? "headShake .5s" : "none" }}>
           <WordTiles typed={displayChars.join("")} word={cw} result={result} saber={saber} revealed={revealed} />
         </div>
-        {result && <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 8, color: result === "ok" ? "#44CC44" : "#EE4444", animation: "fadeSlideUp .3s" }}>{result === "ok" ? "✦ DIRECT HIT!" : "MISS!"}</div>}
+        {result && <div style={{ textAlign: "center", marginBottom: 8, animation: "fadeSlideUp .3s" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: result === "ok" ? "#44CC44" : "#EE4444" }}>{result === "ok" ? "✦ DIRECT HIT!" : "MISS!"}</div>
+          {result === "no" && <div style={{ fontSize: 10, color: "#AA666688", marginTop: 2 }}>{isRetry ? "No Force lost (retry)" : "-1 Force"}</div>}
+        </div>}
         <input ref={inp} type="text" value={typed} onChange={handleInput} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
         <Keyboard onKey={handleKey} onDel={handleDel} onSubmit={submit} typed={displayChars.join("").trim()} result={result} saber={saber} />
       </div>
