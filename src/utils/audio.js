@@ -209,8 +209,18 @@ export const sfxComboOk = (combo = 0) => {
 export const say = (w) => {
   if (_muted) return;
   if (typeof speechSynthesis === "undefined") return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(w);
-  u.rate = 0.85;
-  speechSynthesis.speak(u);
+  try {
+    speechSynthesis.cancel();
+    // Small delay after cancel to avoid Chrome killing the new utterance
+    setTimeout(() => {
+      const u = new SpeechSynthesisUtterance(w);
+      u.lang = "en-GB";
+      u.rate = 0.85;
+      // Pick a voice if available (prefer UK English for Arthur)
+      const voices = speechSynthesis.getVoices();
+      const gbVoice = voices.find((v) => v.lang === "en-GB") || voices.find((v) => v.lang.startsWith("en"));
+      if (gbVoice) u.voice = gbVoice;
+      speechSynthesis.speak(u);
+    }, 50);
+  } catch {}
 };

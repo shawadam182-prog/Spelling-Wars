@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { LW } from "../data/words";
 import { WS } from "../data/words";
-import { sfx, sfxComboOk } from "../utils/audio";
+import { sfx, sfxComboOk, say } from "../utils/audio";
 import { saberBonus } from "../utils/helpers";
 import Stars from "./Stars";
 import Keyboard from "./Keyboard";
@@ -175,9 +175,10 @@ const DailyChallenge = ({ profile, onComplete, onExit }) => {
         <span style={{ fontSize: 10, color: "#8888AA", letterSpacing: 2 }}>WORD {idx + 1} OF 5</span>
       </div>
 
-      {/* Sentence clue */}
+      {/* Sentence clue + hear button */}
       <div style={{ textAlign: "center", padding: "8px 20px", position: "relative", zIndex: 10 }}>
         <p style={{ fontSize: 13, color: "#CCCCDD", fontStyle: "italic", lineHeight: 1.5, maxWidth: 380, margin: "0 auto" }}>"{sentence}"</p>
+        <button onClick={() => say(word)} style={{ marginTop: 6, padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
       </div>
 
       {/* Word tiles */}
