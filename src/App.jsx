@@ -23,6 +23,7 @@ const SABERS = [
   { name: "Yellow", c: "#CCCC22", g: "#CCCC2260" },
   { name: "White", c: "#EEEEFF", g: "#EEEEFF60" },
 ];
+const SABER_COSTS = [0, 5, 10, 15, 20];
 const getSaber = (i) => SABERS[i] || SABERS[0];
 
 const PLANETS = [
@@ -191,14 +192,13 @@ const DEFP = {
   jediRank: "Youngling",
   lightsaberColor: 0,
   kyberCrystals: 0,
-  unlockedDroids: [],
+  unlockedSabers: [0],
   wordProgress: {},
   planetsCompleted: [],
 };
 
 // ─── UTILS ──────────────────────────────────────────────────────────────────
 
-// FIX: Shared AudioContext singleton — avoids browser context limits
 let _audioCtx = null;
 const getAudioCtx = () => {
   try {
@@ -210,7 +210,17 @@ const getAudioCtx = () => {
   }
 };
 
+// Persistent mute system
+let _muted = false;
+try { _muted = localStorage.getItem("jedi_muted") === "true"; } catch {}
+const isMuted = () => _muted;
+const setMutedGlobal = (v) => {
+  _muted = v;
+  try { localStorage.setItem("jedi_muted", v ? "true" : "false"); } catch {}
+};
+
 const sfx = (t) => {
+  if (_muted) return;
   try {
     const c = getAudioCtx();
     if (!c) return;
@@ -258,12 +268,20 @@ const sfx = (t) => {
       g.gain.setValueAtTime(0.12, c.currentTime);
       g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.7);
       o.start(); o.stop(c.currentTime + 0.7);
+    } else if (t === "saber") {
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(180, c.currentTime);
+      o.frequency.setValueAtTime(220, c.currentTime + 0.1);
+      o.frequency.setValueAtTime(200, c.currentTime + 0.3);
+      g.gain.setValueAtTime(0.06, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.4);
+      o.start(); o.stop(c.currentTime + 0.4);
     }
   } catch {}
 };
 
-// FIX: Guard for speechSynthesis availability
 const say = (w) => {
+  if (_muted) return;
   if (typeof speechSynthesis === "undefined") return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(w);
@@ -297,6 +315,49 @@ const Stars = ({ n = 120 }) => {
           backgroundColor: s.sz > 1.8 ? "#FFFDE8" : "#E8E8FF",
           opacity: s.op,
           animation: `starTwinkle ${s.d}s ease-in-out ${s.dl}s infinite`,
+        }} />
+      ))}
+    </div>
+  );
+};
+
+// ─── MUTE BUTTON ────────────────────────────────────────────────────────────
+
+const MuteBtn = () => {
+  const [m, setM] = useState(isMuted());
+  return (
+    <button onClick={() => { const n = !m; setM(n); setMutedGlobal(n); }} style={{
+      background: "none", border: "1px solid #333", borderRadius: 6,
+      color: m ? "#666" : "#FFE066", fontSize: 14, padding: "3px 8px",
+      cursor: "pointer", minWidth: 32,
+    }} title={m ? "Unmute" : "Mute"}>
+      {m ? "🔇" : "🔊"}
+    </button>
+  );
+};
+
+// ─── HYPERSPACE OVERLAY ─────────────────────────────────────────────────────
+
+const HyperspaceOverlay = ({ active, onDone }) => {
+  const lines = useMemo(() => Array.from({ length: 40 }, (_, i) => ({
+    i, x: Math.random() * 100, delay: Math.random() * 0.2, w: Math.random() * 2 + 1,
+  })), []);
+
+  useEffect(() => {
+    if (!active) return;
+    const t = setTimeout(onDone, 700);
+    return () => clearTimeout(t);
+  }, [active, onDone]);
+
+  if (!active) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#05050F", overflow: "hidden", animation: "hyperspaceFade .7s forwards" }}>
+      {lines.map((l) => (
+        <div key={l.i} style={{
+          position: "absolute", left: `${l.x}%`, top: "50%", width: l.w,
+          background: "linear-gradient(to bottom, transparent, #4A9EEA88, #FFFFFFCC, #4A9EEA88, transparent)",
+          animation: `hyperspaceStretch .5s ${l.delay}s ease-in forwards`,
+          height: 2, opacity: 0,
         }} />
       ))}
     </div>
@@ -343,38 +404,26 @@ const canReach = (grid, sx, sy, tx, ty) => {
 
 const genMap = (pi, words) => {
   const pl = PLANETS[pi];
-
-  // FIX: Retry map generation until reachable (max 10 attempts)
   for (let attempt = 0; attempt < 10; attempt++) {
     const g = Array.from({ length: GS }, () => Array(GS).fill(0));
-
-    // Place walls
     let wc = 0;
     while (wc < 8 + Math.floor(Math.random() * 5)) {
       const x = Math.floor(Math.random() * GS), y = Math.floor(Math.random() * GS);
       if ((x === 0 && y === GS - 1) || (x === GS - 1 && y === 0)) continue;
       if (g[y][x] === 0) { g[y][x] = 1; wc++; }
     }
-
-    // Place hazards
     let hc = 0;
     while (hc < 2) {
       const x = Math.floor(Math.random() * GS), y = Math.floor(Math.random() * GS);
       if (g[y][x] === 0 && !(x === 0 && y === GS - 1) && !(x === GS - 1 && y === 0)) { g[y][x] = 2; hc++; }
     }
-
-    // Clear diagonal if blocked
     if (!canReach(g, 0, GS - 1, GS - 1, 0)) {
       for (let i = 0; i < GS; i++) {
         const y = GS - 1 - i;
         if (g[y][i] === 1) g[y][i] = 0;
       }
     }
-
-    // Verify reachability after fix
     if (!canReach(g, 0, GS - 1, GS - 1, 0)) continue;
-
-    // Place entities
     const ents = [];
     const occ = new Set([`0,${GS - 1}`, `${GS - 1},0`]);
     const place = (type, emoji, word) => {
@@ -391,21 +440,17 @@ const genMap = (pi, words) => {
       }
       return false;
     };
-
     words.forEach((w, i) => place("enemy", pl.ee[i % pl.ee.length], w));
     place("kyber", "💎", null);
     place("kyber", "💎", null);
     place("holocron", "📦", null);
     pl.fe.forEach((e) => place("decor", e, null));
     ents.push({ id: "boss", type: "boss", x: GS - 1, y: 0, emoji: BOSSES[pi].icon, word: null });
-
     return { grid: g, entities: ents };
   }
-
-  // Fallback: empty grid with just boss
   const g = Array.from({ length: GS }, () => Array(GS).fill(0));
   const ents = [];
-  words.forEach((w, i) => ents.push({ id: `enemy-${i}`, type: "enemy", x: Math.min(i + 1, GS - 2), y: Math.min(i, GS - 2), emoji: pl.ee[i % pl.ee.length], word: w }));
+  words.forEach((w, i) => ents.push({ id: `enemy-${i}`, type: "enemy", x: Math.min(i + 1, GS - 2), y: Math.min(i, GS - 2), emoji: PLANETS[pi].ee[i % PLANETS[pi].ee.length], word: w }));
   ents.push({ id: "boss", type: "boss", x: GS - 1, y: 0, emoji: BOSSES[pi].icon, word: null });
   return { grid: g, entities: ents };
 };
@@ -425,8 +470,11 @@ const Keyboard = ({ onKey, onDel, onSubmit, typed, result, saber }) => (
         {row.map((k) => (
           <button key={k} onClick={() => onKey(k.toLowerCase())} style={{
             width: 34, height: 40, fontSize: 13, fontWeight: 600,
-            background: "#0E0E1E", border: "1px solid #2a2a4a", borderRadius: 5,
-            color: "#CCCCEE", cursor: "pointer",
+            background: "#0E0E1E",
+            border: `1px solid ${saber.c}44`,
+            borderRadius: 5, color: "#CCCCEE", cursor: "pointer",
+            boxShadow: `0 0 4px ${saber.g}, inset 0 0 3px ${saber.c}11`,
+            transition: "box-shadow .15s, transform .1s",
           }}>{k}</button>
         ))}
       </div>
@@ -443,10 +491,64 @@ const Keyboard = ({ onKey, onDel, onSubmit, typed, result, saber }) => (
         border: `1px solid ${typed && !result ? saber.c + "66" : "#222"}`,
         borderRadius: 5, color: typed && !result ? "#FFE066" : "#444",
         cursor: typed && !result ? "pointer" : "default", letterSpacing: 2,
+        boxShadow: typed && !result ? `0 0 10px ${saber.g}` : "none",
       }}>SUBMIT ▸</button>
     </div>
   </div>
 );
+
+// ─── SABER PICKER ───────────────────────────────────────────────────────────
+
+const SaberPicker = ({ profile, onSelect, onClose }) => {
+  const owned = profile.unlockedSabers || [0];
+  const current = profile.lightsaberColor;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#05050FEE", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", animation: "slideIn .3s" }}>
+      <div style={{ background: "#0A0A1A", border: "1px solid #2a2a4a", borderRadius: 16, padding: 24, maxWidth: 380, width: "90%", textAlign: "center" }}>
+        <div style={{ fontSize: 10, color: "#FFE06666", letterSpacing: 3, marginBottom: 4 }}>LIGHTSABER</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#FFE066", margin: "0 0 6px", letterSpacing: 2 }}>ARMORY</h2>
+        <div style={{ fontSize: 11, color: "#666", marginBottom: 16 }}>Kyber Crystals: <b style={{ color: "#66CCFF" }}>{profile.kyberCrystals}</b></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {SABERS.map((s, i) => {
+            const isOwned = owned.includes(i);
+            const isCurrent = current === i;
+            const cost = SABER_COSTS[i];
+            const canAfford = profile.kyberCrystals >= cost;
+            return (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
+                background: isCurrent ? `${s.c}15` : "#0E0E1E",
+                border: `1px solid ${isCurrent ? s.c + "66" : "#1a1a3a"}`,
+                borderRadius: 10, transition: "all .2s",
+              }}>
+                <div style={{
+                  width: 6, height: 36, borderRadius: 3,
+                  background: `linear-gradient(to bottom, ${s.c}, ${s.c}88)`,
+                  boxShadow: `0 0 8px ${s.g}`,
+                }} />
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: s.c }}>{s.name}</div>
+                  {!isOwned && <div style={{ fontSize: 10, color: "#888" }}>{cost} Kyber Crystals</div>}
+                </div>
+                {isCurrent ? (
+                  <span style={{ fontSize: 10, color: s.c, letterSpacing: 1, fontWeight: 700, padding: "4px 10px", background: `${s.c}15`, borderRadius: 4 }}>EQUIPPED</span>
+                ) : isOwned ? (
+                  <button onClick={() => { sfx("saber"); onSelect(i); }} style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "4px 10px", background: `${s.c}22`, border: `1px solid ${s.c}44`, borderRadius: 4, color: s.c, cursor: "pointer" }}>EQUIP</button>
+                ) : (
+                  <button onClick={() => canAfford && onSelect(i, cost)} disabled={!canAfford} style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "4px 10px", background: canAfford ? "#FFE06615" : "#111", border: `1px solid ${canAfford ? "#FFE06644" : "#222"}`, borderRadius: 4, color: canAfford ? "#FFE066" : "#444", cursor: canAfford ? "pointer" : "default" }}>
+                    UNLOCK {cost}💎
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <button onClick={onClose} style={{ marginTop: 16, padding: "8px 24px", fontSize: 12, background: "none", border: "1px solid #333", borderRadius: 8, color: "#888", cursor: "pointer", letterSpacing: 1 }}>CLOSE</button>
+      </div>
+    </div>
+  );
+};
 
 // ─── PLANET EXPLORER ────────────────────────────────────────────────────────
 
@@ -458,7 +560,14 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
   const [msg, setMsg] = useState(null);
   const saber = getSaber(profile.lightsaberColor);
 
-  // FIX: Refs to avoid stale closures in move callback
+  // Mobile-responsive tile size
+  const [ts, setTs] = useState(Math.min(48, (window.innerWidth - 40) / GS));
+  useEffect(() => {
+    const onResize = () => setTs(Math.min(48, (window.innerWidth - 40) / GS));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const posRef = useRef(pos);
   const entsRef = useRef(ents);
   const msgTimerRef = useRef(null);
@@ -488,10 +597,8 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
     msgTimerRef.current = setTimeout(() => setMsg(null), duration);
   }, []);
 
-  // FIX: Cleanup msg timer on unmount
   useEffect(() => () => { if (msgTimerRef.current) clearTimeout(msgTimerRef.current); }, []);
 
-  // FIX: Use refs in move to prevent stale closure
   const move = useCallback((dx, dy) => {
     if (!map) return;
     setDir({ x: dx, y: dy });
@@ -547,7 +654,6 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
   }, [move]);
 
   if (!map) return null;
-  const ts = Math.min(48, (window.innerWidth - 40) / GS);
   const dp = { background: "#12122A", border: "1px solid #2a2a4a", borderRadius: 8, color: "#8888CC", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
 
   return (
@@ -557,7 +663,10 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <button onClick={onExit} style={{ background: "none", border: "none", color: "#556", fontSize: 12, cursor: "pointer" }}>◂ RETREAT</button>
           <div style={{ fontSize: 12, color: planet.c, letterSpacing: 1.5, fontWeight: 700 }}>{planet.name.toUpperCase()}</div>
-          <div style={{ fontSize: 14, color: "#FFE066", fontFamily: "monospace", fontWeight: 700 }}>{score}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 14, color: "#FFE066", fontFamily: "monospace", fontWeight: 700 }}>{score}</div>
+            <MuteBtn />
+          </div>
         </div>
         <div style={{ display: "flex", gap: 16, alignItems: "center", fontSize: 11, color: "#888" }}>
           <span>Enemies: <b style={{ color: def >= total ? "#44CC44" : "#FFE066" }}>{def}/{total}</b></span>
@@ -581,7 +690,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
                 {cell === 2 && <span style={{ fontSize: ts * 0.4, opacity: 0.5 }}>{planet.he}</span>}
                 {ent && !isP && ent.type !== "decor" && <span style={{ fontSize: ts * 0.5, position: "absolute", zIndex: 5, animation: ent.type === "boss" ? (bossOk ? "entityBob 1s infinite" : "none") : ent.type === "enemy" ? "entityBob 1.5s infinite" : "none", opacity: ent.type === "boss" && !bossOk ? 0.4 : 1, filter: ent.type === "boss" && bossOk ? `drop-shadow(0 0 6px ${planet.c})` : "none" }}>{ent.emoji}</span>}
                 {ent && ent.type === "decor" && !isP && <span style={{ fontSize: ts * 0.35, opacity: 0.4 }}>{ent.emoji}</span>}
-                {isP && <div style={{ position: "absolute", zIndex: 10, fontSize: ts * 0.55, filter: `drop-shadow(0 0 6px ${saber.c})`, transform: dir.x < 0 ? "scaleX(-1)" : "none" }}>🧑‍🚀</div>}
+                {isP && <div style={{ position: "absolute", zIndex: 10, fontSize: ts * 0.55, filter: `drop-shadow(0 0 6px ${saber.c})`, transform: dir.x < 0 ? "scaleX(-1)" : "none" }}>🥷</div>}
               </div>
             );
           }))}
@@ -604,6 +713,7 @@ const Encounter = ({ word, planet, profile, onResult }) => {
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState(null);
   const [sk, setSk] = useState(0);
+  const [showSlash, setShowSlash] = useState(false);
   const sn = useMemo(() => sent(word), [word]);
   const saber = getSaber(profile.lightsaberColor);
   const inp = useRef(null);
@@ -613,17 +723,17 @@ const Encounter = ({ word, planet, profile, onResult }) => {
   useEffect(() => {
     setTyped("");
     setResult(null);
+    setShowSlash(false);
     const t = setTimeout(() => { say(word); inp.current?.focus(); }, 300);
     return () => clearTimeout(t);
   }, [word]);
 
-  // FIX: Cleanup timer on unmount
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   const submit = () => {
     if (!typed.trim() || result) return;
     if (typed.trim().toLowerCase() === word.toLowerCase()) {
-      setResult("ok"); sfx("ok");
+      setResult("ok"); sfx("ok"); setShowSlash(true);
       logSpellingAttempt(profile.username, word, true, { level: profile.level });
       timerRef.current = setTimeout(() => onResult(true), 1200);
     } else {
@@ -635,6 +745,9 @@ const Encounter = ({ word, planet, profile, onResult }) => {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#05050FEE", zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", animation: "slideIn .3s" }}>
+      {showSlash && (
+        <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translateX(-50%)", width: 200, height: 4, borderRadius: 2, background: `linear-gradient(90deg, transparent, ${saber.c}, ${saber.c}, transparent)`, boxShadow: `0 0 20px ${saber.c}, 0 0 40px ${saber.g}`, animation: "saberSlash .5s forwards", zIndex: 110, pointerEvents: "none" }} />
+      )}
       <div style={{ textAlign: "center", marginBottom: 14 }}>
         <div style={{ fontSize: 11, color: "#EE666688", letterSpacing: 2 }}>ENCOUNTER</div>
         <div style={{ fontSize: 14, color: planet.c, fontWeight: 700, letterSpacing: 1, marginTop: 4 }}>{enRef.current}</div>
@@ -662,6 +775,7 @@ const BossBattle = ({ boss, words, planet, profile, onWin, onLose }) => {
   const [sk, setSk] = useState(0);
   const [phase, setPhase] = useState("intro");
   const [hurt, setHurt] = useState(false);
+  const [showSlash, setShowSlash] = useState(false);
   const saber = getSaber(profile.lightsaberColor);
   const inp = useRef(null);
   const timerRef = useRef(null);
@@ -669,7 +783,6 @@ const BossBattle = ({ boss, words, planet, profile, onWin, onLose }) => {
   const cw = bw[round];
   const sn = useMemo(() => (cw ? sent(cw) : { masked: "", full: "" }), [cw]);
 
-  // FIX: Cleanup timers on unmount
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   useEffect(() => {
@@ -688,10 +801,10 @@ const BossBattle = ({ boss, words, planet, profile, onWin, onLose }) => {
   const submit = () => {
     if (!typed.trim() || result || phase !== "fight") return;
     if (typed.trim().toLowerCase() === cw.toLowerCase()) {
-      setResult("ok"); sfx("ok"); setHurt(true);
+      setResult("ok"); sfx("ok"); setHurt(true); setShowSlash(true);
       const nh = hp - 1; setHp(nh);
       logSpellingAttempt(profile.username, cw, true, { level: profile.level, isBossBattle: true });
-      setTimeout(() => setHurt(false), 500);
+      setTimeout(() => { setHurt(false); setShowSlash(false); }, 500);
       timerRef.current = setTimeout(() => {
         if (nh <= 0) { sfx("win"); setPhase("win"); }
         else { setRound((r) => r + 1); setTyped(""); setResult(null); }
@@ -744,6 +857,9 @@ const BossBattle = ({ boss, words, planet, profile, onWin, onLose }) => {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#05050F", zIndex: 100, display: "flex", flexDirection: "column" }}>
       <Stars n={30} />
+      {showSlash && (
+        <div style={{ position: "absolute", top: "25%", left: "50%", transform: "translateX(-50%)", width: 180, height: 4, borderRadius: 2, background: `linear-gradient(90deg, transparent, ${saber.c}, ${saber.c}, transparent)`, boxShadow: `0 0 20px ${saber.c}, 0 0 40px ${saber.g}`, animation: "saberSlash .5s forwards", zIndex: 110, pointerEvents: "none" }} />
+      )}
       <div style={{ position: "relative", zIndex: 10, padding: "12px 16px", borderBottom: "1px solid #2a1a1a" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div style={{ fontSize: 12, color: "#EE6666", fontWeight: 700, letterSpacing: 1 }}>{boss.icon} {boss.name.toUpperCase()}</div>
@@ -801,7 +917,7 @@ const Login = ({ onLogin, loading }) => {
 
 // ─── GALAXY MAP ─────────────────────────────────────────────────────────────
 
-const Galaxy = ({ profile, onSelect, onLogout }) => {
+const Galaxy = ({ profile, onSelect, onLogout, onSaberPick }) => {
   const [hov, setHov] = useState(null);
   const [lore, setLore] = useState(null);
   const loreTimer = useRef(null);
@@ -831,6 +947,7 @@ const Galaxy = ({ profile, onSelect, onLogout }) => {
             <div style={{ fontSize: 16, color: "#66CCFF", fontWeight: 700, fontFamily: "monospace" }}>{profile.kyberCrystals}</div>
             <div style={{ fontSize: 9, color: "#666688", letterSpacing: 1 }}>KYBER</div>
           </div>
+          <MuteBtn />
           <button onClick={onLogout} style={{ background: "none", border: "1px solid #333", borderRadius: 6, color: "#666", fontSize: 10, padding: "3px 8px", cursor: "pointer" }}>LOG OUT</button>
         </div>
       </div>
@@ -840,36 +957,38 @@ const Galaxy = ({ profile, onSelect, onLogout }) => {
       </div>
       <div style={{ flex: 1, position: "relative", zIndex: 5, padding: "10px 20px 10px", minHeight: 440 }}>
         {PLANETS.map((pl, i) => {
-          const p = pts[i], unlk = profile.level >= pl.id, cur = profile.level === pl.id, done = profile.level > pl.id, h = hov === pl.id, bossData = BOSSES[i], sz = cur ? 58 : done ? 48 : 44;
+          const p = pts[i], unlk = profile.level >= pl.id, cur = profile.level === pl.id, done = (profile.planetsCompleted || []).includes(pl.id), h = hov === pl.id, bossData = BOSSES[i], sz = cur ? 58 : done ? 48 : 44;
           return (
-            <div key={pl.id} onMouseEnter={() => unlk && setHov(pl.id)} onMouseLeave={() => setHov(null)} onClick={() => unlk && onSelect(pl.id)} style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%,-50%)", cursor: unlk ? "pointer" : "default", zIndex: h ? 20 : 10, transition: "transform .2s" }}>
+            <div key={pl.id} onMouseEnter={() => (unlk || done) && setHov(pl.id)} onMouseLeave={() => setHov(null)} onClick={() => (unlk || done) && onSelect(pl.id, done && !cur)} style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%,-50%)", cursor: (unlk || done) ? "pointer" : "default", zIndex: h ? 20 : 10, transition: "transform .2s" }}>
               {cur && <div style={{ position: "absolute", inset: -10, borderRadius: "50%", border: `2px solid ${pl.c}44`, animation: "planetPulse 2s infinite" }} />}
               <div style={{ width: sz, height: sz, borderRadius: "50%", background: unlk ? `radial-gradient(circle at 35% 35%,${pl.c}CC,${pl.c}44,${pl.c}11)` : "radial-gradient(circle at 35% 35%,#333,#1a1a1a)", boxShadow: unlk ? `0 0 ${cur ? 28 : 12}px ${pl.gc}` : "none", transition: "all .3s", display: "flex", alignItems: "center", justifyContent: "center", transform: h ? "scale(1.15)" : "scale(1)", opacity: unlk ? 1 : 0.3 }}>
                 {done && <span style={{ fontSize: 16, filter: "drop-shadow(0 0 4px #FFE066)" }}>✦</span>}
-                {!unlk && <span style={{ fontSize: 14, opacity: 0.5 }}>🔒</span>}
+                {!unlk && !done && <span style={{ fontSize: 14, opacity: 0.5 }}>🔒</span>}
               </div>
               <div style={{ textAlign: "center", marginTop: 5, whiteSpace: "nowrap" }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: unlk ? (cur ? "#FFE066" : "#CCC") : "#444" }}>{pl.name.toUpperCase()}</div>
                 {cur && <div style={{ fontSize: 8, color: "#FFE06688" }}>▸ YOU ARE HERE</div>}
+                {done && !cur && <div style={{ fontSize: 8, color: "#44AA44" }}>PRACTICE</div>}
               </div>
-              {h && unlk && (
+              {h && (unlk || done) && (
                 <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 10, padding: "8px 12px", borderRadius: 8, background: "#12122A", border: "1px solid #2a2a4a", boxShadow: "0 4px 20px rgba(0,0,0,.6)", whiteSpace: "nowrap", minWidth: 170, textAlign: "center", zIndex: 30 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: pl.c, letterSpacing: 1 }}>{pl.name}</div>
                   <div style={{ fontSize: 10, color: "#8888AA", fontStyle: "italic", margin: "3px 0" }}>"{pl.desc}"</div>
                   <div style={{ fontSize: 9, color: "#666688" }}>{LW[i]?.length} words — Boss: {bossData.icon} {bossData.name}</div>
-                  <div style={{ marginTop: 6, fontSize: 10, fontWeight: 600, color: cur ? "#FFE066" : "#44AA44", padding: "2px 8px", borderRadius: 4, background: cur ? "#FFE06615" : "#44AA4415" }}>{done ? "✦ COMPLETED" : "▸ TAP TO LAUNCH"}</div>
+                  <div style={{ marginTop: 6, fontSize: 10, fontWeight: 600, color: done && !cur ? "#44AA44" : cur ? "#FFE066" : "#44AA44", padding: "2px 8px", borderRadius: 4, background: done && !cur ? "#44AA4415" : cur ? "#FFE06615" : "#44AA4415" }}>{done && !cur ? "✦ PRACTICE MODE" : done ? "✦ COMPLETED" : "▸ TAP TO LAUNCH"}</div>
                 </div>
               )}
             </div>
           );
         })}
       </div>
-      <div style={{ position: "relative", zIndex: 10, padding: "10px 20px 18px", display: "flex", gap: 8, justifyContent: "center" }}>
+      <div style={{ position: "relative", zIndex: 10, padding: "10px 20px 18px", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
         <button onClick={() => {
           if (loreTimer.current) clearTimeout(loreTimer.current);
           setLore(LORE[Math.floor(Math.random() * LORE.length)]);
           loreTimer.current = setTimeout(() => setLore(null), 5000);
         }} style={{ background: "#12122A", border: "1px solid #2a2a4a", borderRadius: 8, color: "#8888CC", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>✦ ARCHIVES</button>
+        <button onClick={onSaberPick} style={{ background: "#12122A", border: `1px solid ${saber.c}44`, borderRadius: 8, color: saber.c, fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>⚔ LIGHTSABER</button>
         <button onClick={() => onSelect(profile.level)} style={{ background: `linear-gradient(135deg,${saber.c}33,${saber.c}11)`, border: `1px solid ${saber.c}66`, borderRadius: 8, color: "#FFE066", fontSize: 13, fontWeight: 700, padding: "8px 24px", cursor: "pointer", letterSpacing: 2 }}>▸ LAUNCH MISSION</button>
       </div>
       {lore && (
@@ -884,7 +1003,7 @@ const Galaxy = ({ profile, onSelect, onLogout }) => {
 
 // ─── BRIEFING ───────────────────────────────────────────────────────────────
 
-const Briefing = ({ planet, boss, words, profile, onStart, onBack }) => {
+const Briefing = ({ planet, boss, words, profile, isPractice, onStart, onBack }) => {
   const [show, setShow] = useState(false);
   const saber = getSaber(profile.lightsaberColor);
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t); }, []);
@@ -893,9 +1012,10 @@ const Briefing = ({ planet, boss, words, profile, onStart, onBack }) => {
       <Stars n={80} />
       <div style={{ position: "relative", zIndex: 10, textAlign: "center", padding: 20, width: "100%", maxWidth: 460, opacity: show ? 1 : 0, transform: show ? "translateY(0)" : "translateY(30px)", transition: "all .6s" }}>
         <div style={{ width: 90, height: 90, borderRadius: "50%", margin: "0 auto 16px", background: `radial-gradient(circle at 35% 35%,${planet.c}CC,${planet.c}44)`, boxShadow: `0 0 40px ${planet.gc}`, animation: "planetFloat 4s infinite" }} />
-        <div style={{ fontSize: 10, color: "#FFE06666", letterSpacing: 4 }}>MISSION BRIEFING</div>
+        <div style={{ fontSize: 10, color: isPractice ? "#44AA4488" : "#FFE06666", letterSpacing: 4 }}>{isPractice ? "PRACTICE MISSION" : "MISSION BRIEFING"}</div>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: planet.c, margin: "4px 0", letterSpacing: 3, textShadow: `0 0 20px ${planet.gc}` }}>{planet.name.toUpperCase()}</h1>
         <p style={{ fontSize: 13, color: "#8888AA", fontStyle: "italic", margin: "0 0 20px" }}>"{planet.desc}"</p>
+        {isPractice && <div style={{ fontSize: 11, color: "#44AA44", background: "#44AA4415", padding: "4px 12px", borderRadius: 4, display: "inline-block", marginBottom: 12 }}>Practice — no rank or score changes</div>}
         <div style={{ background: "#0A0A1A", border: "1px solid #1a1a3a", borderRadius: 12, padding: 18, textAlign: "left" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div><div style={{ fontSize: 9, color: "#556", letterSpacing: 1.5 }}>WORDS</div><div style={{ fontSize: 20, color: "#FFE066", fontWeight: 700, fontFamily: "monospace" }}>{words.length}</div></div>
@@ -921,6 +1041,49 @@ const Briefing = ({ planet, boss, words, profile, onStart, onBack }) => {
   );
 };
 
+// ─── GRAND MASTER CELEBRATION ───────────────────────────────────────────────
+
+const GrandMasterCelebration = ({ profile, onContinue }) => {
+  const [show, setShow] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setShow(true), 300); return () => clearTimeout(t); }, []);
+  useEffect(() => { sfx("win"); }, []);
+
+  const saberIcons = SABERS.map((s, i) => (
+    <div key={i} style={{
+      position: "absolute", animation: `grandMasterOrbit ${6 + i}s linear infinite`,
+      animationDelay: `${i * 1.2}s`,
+    }}>
+      <div style={{ width: 8, height: 24, borderRadius: 4, background: s.c, boxShadow: `0 0 12px ${s.g}` }} />
+    </div>
+  ));
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#05050F", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+      <Stars n={200} />
+      <div style={{ position: "relative", zIndex: 10, textAlign: "center", padding: 20, opacity: show ? 1 : 0, transform: show ? "scale(1)" : "scale(0.8)", transition: "all 1s ease-out" }}>
+        <div style={{ position: "relative", width: 160, height: 160, margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {saberIcons}
+          <div style={{ fontSize: 64, animation: "planetFloat 3s infinite", filter: "drop-shadow(0 0 20px #FFE066)" }}>✶</div>
+        </div>
+        <div style={{ fontSize: 11, color: "#FFE06688", letterSpacing: 4, marginBottom: 8 }}>YOU HAVE ACHIEVED THE RANK OF</div>
+        <h1 style={{ fontSize: 42, fontWeight: 900, color: "#FFE066", letterSpacing: 6, margin: "0 0 8px", animation: "grandMasterGlow 3s ease-in-out infinite" }}>GRAND MASTER</h1>
+        <p style={{ fontSize: 16, color: "#AABB", maxWidth: 400, margin: "0 auto 8px", lineHeight: 1.6 }}>All planets have been liberated. The galaxy is at peace.</p>
+        <p style={{ fontSize: 14, color: "#FFE066", fontFamily: "monospace", marginTop: 16 }}>Final Score: {profile.totalScore.toLocaleString()}</p>
+        <p style={{ fontSize: 12, color: "#66CCFF", marginTop: 4 }}>Kyber Crystals: {profile.kyberCrystals}</p>
+        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 12, flexWrap: "wrap" }}>
+          {PLANETS.map((pl) => (
+            <div key={pl.id} style={{ width: 28, height: 28, borderRadius: "50%", background: `radial-gradient(circle at 35% 35%,${pl.c}CC,${pl.c}44)`, boxShadow: `0 0 8px ${pl.gc}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 10, filter: "drop-shadow(0 0 3px #FFE066)" }}>✦</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={onContinue} style={{ marginTop: 28, padding: "14px 36px", fontSize: 15, fontWeight: 700, letterSpacing: 3, background: "#FFE06615", border: "1px solid #FFE06644", borderRadius: 8, color: "#FFE066", cursor: "pointer" }}>▸ RETURN TO GALAXY</button>
+        <p style={{ fontSize: 11, color: "#556", marginTop: 12 }}>You can revisit any planet in Practice Mode!</p>
+      </div>
+    </div>
+  );
+};
+
 // ─── MAIN APP ───────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -932,8 +1095,11 @@ export default function App() {
   const [encWord, setEncWord] = useState(null);
   const [showBoss, setShowBoss] = useState(false);
   const [exScore, setExScore] = useState(0);
+  const [practiceMode, setPracticeMode] = useState(false);
+  const [hyperspace, setHyperspace] = useState(false);
+  const [pendingScreen, setPendingScreen] = useState(null);
+  const [showSaberPicker, setShowSaberPicker] = useState(false);
 
-  // FIX: Replaced window.storage with Supabase + localStorage fallback
   const save = useCallback(async (p) => { await saveProgress(p); }, []);
 
   const upd = useCallback(async (u) => {
@@ -945,6 +1111,20 @@ export default function App() {
     });
   }, [save]);
 
+  // Hyperspace transition helper
+  const goTo = useCallback((scr) => {
+    setHyperspace(true);
+    setPendingScreen(scr);
+  }, []);
+
+  const onHyperspaceDone = useCallback(() => {
+    setHyperspace(false);
+    if (pendingScreen) {
+      setScreen(pendingScreen);
+      setPendingScreen(null);
+    }
+  }, [pendingScreen]);
+
   const login = async (n) => {
     const c = n.trim();
     if (!c) return;
@@ -955,22 +1135,22 @@ export default function App() {
     await save(p);
     setProfile(p);
     setLoading(false);
-    setScreen("galaxy");
+    goTo("galaxy");
   };
 
-  const selPl = (id) => {
-    // FIX: Clamp planet selection to valid range
+  const selPl = (id, isPractice = false) => {
     const clamped = Math.min(Math.max(id, 1), PLANETS.length);
     setSelPlanet(clamped);
-    setScreen("briefing");
+    setPracticeMode(!!isPractice);
+    goTo("briefing");
   };
 
   const startExplore = () => {
     setDefEnemies([]);
     setEncWord(null);
     setShowBoss(false);
-    setExScore(profile.totalScore);
-    setScreen("explore");
+    setExScore(practiceMode ? 0 : profile.totalScore);
+    goTo("explore");
   };
 
   const battleWord = (w) => setEncWord(w);
@@ -978,19 +1158,29 @@ export default function App() {
   const battleResult = (won) => {
     if (won) {
       setDefEnemies((p) => [...p, encWord]);
-      setExScore((s) => s + 100);
-      upd({
-        totalScore: (profile?.totalScore || 0) + 100,
-        wordProgress: {
-          ...(profile?.wordProgress || {}),
-          [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + 1,
-        },
-      });
+      if (!practiceMode) {
+        setExScore((s) => s + 100);
+        upd({
+          totalScore: (profile?.totalScore || 0) + 100,
+          wordProgress: {
+            ...(profile?.wordProgress || {}),
+            [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + 1,
+          },
+        });
+      } else {
+        upd({
+          wordProgress: {
+            ...(profile?.wordProgress || {}),
+            [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + 1,
+          },
+        });
+      }
     }
     setEncWord(null);
   };
 
   const collect = (t, a) => {
+    if (practiceMode) return;
     if (t === "kyber") upd({ kyberCrystals: (profile?.kyberCrystals || 0) + a });
     else if (t === "score") {
       setExScore((s) => s + a);
@@ -1002,6 +1192,11 @@ export default function App() {
 
   const bossWin = async () => {
     if (!profile) return;
+    if (practiceMode) {
+      setShowBoss(false);
+      setScreen("victory");
+      return;
+    }
     const nl = Math.min(Math.max(profile.level, (selPlanet || profile.level) + 1), 10);
     const comp = [...(profile.planetsCompleted || [])];
     if (!comp.includes(selPlanet)) comp.push(selPlanet);
@@ -1013,47 +1208,82 @@ export default function App() {
       totalScore: (profile.totalScore || 0) + 500,
     });
     setShowBoss(false);
-    setScreen("victory");
+    // Check for Grand Master (all 10 planets)
+    if (comp.length >= 10) {
+      setScreen("grandmaster");
+    } else {
+      setScreen("victory");
+    }
   };
 
   const bossLose = () => { setShowBoss(false); setScreen("galaxy"); };
 
-  if (screen === "login") return <Login onLogin={login} loading={loading} />;
+  const handleSaberSelect = (idx, cost) => {
+    const owned = profile.unlockedSabers || [0];
+    if (owned.includes(idx)) {
+      // Just equip
+      upd({ lightsaberColor: idx });
+    } else if (cost && profile.kyberCrystals >= cost) {
+      // Unlock and equip
+      sfx("saber");
+      upd({
+        lightsaberColor: idx,
+        unlockedSabers: [...owned, idx],
+        kyberCrystals: profile.kyberCrystals - cost,
+      });
+    }
+  };
 
-  if (screen === "galaxy" && profile) return <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} />;
+  return (
+    <>
+      <HyperspaceOverlay active={hyperspace} onDone={onHyperspaceDone} />
 
-  if (screen === "briefing" && profile && selPlanet) {
-    const p = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
-    return <Briefing planet={p} boss={b} words={w} profile={profile} onStart={startExplore} onBack={() => setScreen("galaxy")} />;
-  }
+      {screen === "login" && <Login onLogin={login} loading={loading} />}
 
-  if (screen === "explore" && profile && selPlanet) {
-    const pl = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
-    return (
-      <>
-        <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onExit={() => setScreen("galaxy")} />
-        {encWord && <Encounter word={encWord} planet={pl} profile={profile} onResult={battleResult} />}
-        {showBoss && <BossBattle boss={b} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
-      </>
-    );
-  }
+      {screen === "galaxy" && profile && (
+        <>
+          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} />
+          {showSaberPicker && <SaberPicker profile={profile} onSelect={(i, c) => { handleSaberSelect(i, c); }} onClose={() => setShowSaberPicker(false)} />}
+        </>
+      )}
 
-  if (screen === "victory" && selPlanet) {
-    const pl = PLANETS[selPlanet - 1];
-    return (
-      <div style={{ minHeight: "100vh", background: "#05050F", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
-        <Stars n={100} />
-        <div style={{ position: "relative", zIndex: 10, textAlign: "center", padding: 20 }}>
-          <div style={{ fontSize: 48, marginBottom: 16, animation: "planetFloat 2s infinite" }}>✦</div>
-          <h1 style={{ fontSize: 34, fontWeight: 900, color: "#FFE066", letterSpacing: 4, textShadow: "0 0 40px #FFE06644" }}>MISSION COMPLETE</h1>
-          <p style={{ fontSize: 16, color: pl.c, marginTop: 8, textShadow: `0 0 15px ${pl.gc}` }}>{pl.name} has been liberated!</p>
-          <p style={{ fontSize: 20, color: "#FFE066", fontFamily: "monospace", marginTop: 16 }}>Score: {profile?.totalScore?.toLocaleString()}</p>
-          <p style={{ fontSize: 13, color: "#66CCFF", marginTop: 6 }}>+5 Kyber Crystals earned!</p>
-          <button onClick={() => setScreen("galaxy")} style={{ marginTop: 24, padding: "12px 32px", fontSize: 15, fontWeight: 700, letterSpacing: 3, background: "#FFE06615", border: "1px solid #FFE06644", borderRadius: 8, color: "#FFE066", cursor: "pointer" }}>▸ CONTINUE</button>
-        </div>
-      </div>
-    );
-  }
+      {screen === "briefing" && profile && selPlanet && (() => {
+        const p = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
+        return <Briefing planet={p} boss={b} words={w} profile={profile} isPractice={practiceMode} onStart={startExplore} onBack={() => setScreen("galaxy")} />;
+      })()}
 
-  return null;
+      {screen === "explore" && profile && selPlanet && (() => {
+        const pl = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
+        return (
+          <>
+            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onExit={() => setScreen("galaxy")} />
+            {encWord && <Encounter word={encWord} planet={pl} profile={profile} onResult={battleResult} />}
+            {showBoss && <BossBattle boss={b} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
+          </>
+        );
+      })()}
+
+      {screen === "victory" && selPlanet && (() => {
+        const pl = PLANETS[selPlanet - 1];
+        return (
+          <div style={{ minHeight: "100vh", background: "#05050F", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
+            <Stars n={100} />
+            <div style={{ position: "relative", zIndex: 10, textAlign: "center", padding: 20 }}>
+              <div style={{ fontSize: 48, marginBottom: 16, animation: "planetFloat 2s infinite" }}>✦</div>
+              <h1 style={{ fontSize: 34, fontWeight: 900, color: "#FFE066", letterSpacing: 4, textShadow: "0 0 40px #FFE06644" }}>{practiceMode ? "PRACTICE COMPLETE" : "MISSION COMPLETE"}</h1>
+              <p style={{ fontSize: 16, color: pl.c, marginTop: 8, textShadow: `0 0 15px ${pl.gc}` }}>{pl.name} has been liberated!</p>
+              {!practiceMode && <p style={{ fontSize: 20, color: "#FFE066", fontFamily: "monospace", marginTop: 16 }}>Score: {profile?.totalScore?.toLocaleString()}</p>}
+              {!practiceMode && <p style={{ fontSize: 13, color: "#66CCFF", marginTop: 6 }}>+5 Kyber Crystals earned!</p>}
+              {practiceMode && <p style={{ fontSize: 13, color: "#44AA44", marginTop: 12 }}>Great practice session!</p>}
+              <button onClick={() => setScreen("galaxy")} style={{ marginTop: 24, padding: "12px 32px", fontSize: 15, fontWeight: 700, letterSpacing: 3, background: "#FFE06615", border: "1px solid #FFE06644", borderRadius: 8, color: "#FFE066", cursor: "pointer" }}>▸ CONTINUE</button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {screen === "grandmaster" && profile && (
+        <GrandMasterCelebration profile={profile} onContinue={() => setScreen("galaxy")} />
+      )}
+    </>
+  );
 }

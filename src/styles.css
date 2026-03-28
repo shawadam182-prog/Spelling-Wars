@@ -7,6 +7,31 @@
 @keyframes entityBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
 @keyframes slideIn { from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1} }
 
+@keyframes hyperspaceStretch {
+  0% { height: 2px; opacity: 0; }
+  15% { opacity: 1; }
+  100% { height: 100vh; opacity: 0; }
+}
+@keyframes hyperspaceFade {
+  0% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes saberSlash {
+  0% { transform: rotate(-35deg) scaleX(0); opacity: 0; }
+  15% { opacity: 1; }
+  50% { transform: rotate(-35deg) scaleX(1); opacity: 1; }
+  100% { transform: rotate(-35deg) scaleX(1.3); opacity: 0; }
+}
+@keyframes grandMasterGlow {
+  0%,100% { text-shadow: 0 0 20px #FFE06633, 0 0 40px #FFE06611; }
+  50% { text-shadow: 0 0 30px #FFE06666, 0 0 60px #FFE06644, 0 0 90px #FFE06622; }
+}
+@keyframes grandMasterOrbit {
+  from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+}
+
 * { box-sizing: border-box; }
 body { margin: 0; padding: 0; background: #05050F; }
 input::placeholder { color: #33335588; }
