@@ -19,6 +19,7 @@ import Stars from "./components/Stars";
 import GrandMasterCelebration from "./components/GrandMasterCelebration";
 import AchievementToast from "./components/AchievementToast";
 import AchievementPanel from "./components/AchievementPanel";
+import DailyChallenge from "./components/DailyChallenge";
 
 // ─── MAIN APP ───────────────────────────────────────────────────────────────
 
@@ -261,6 +262,28 @@ export default function App() {
     }
   };
 
+  // Daily challenge
+  const startDaily = () => goTo("daily");
+
+  const onDailyComplete = (correct, date) => {
+    if (!profile) return;
+    // Calculate streak
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+    const wasYesterday = profile.lastDailyDate === yStr;
+    const wasToday = profile.lastDailyDate === date;
+    const newStreak = wasToday ? profile.dailyStreak : (wasYesterday ? (profile.dailyStreak || 0) + 1 : 1);
+    const crystals = correct >= 5 ? 5 : correct >= 3 ? 3 : 1;
+    const streakBonus = newStreak >= 3 ? 2 : 0;
+    upd({
+      kyberCrystals: (profile.kyberCrystals || 0) + crystals + streakBonus,
+      dailyStreak: newStreak,
+      lastDailyDate: date,
+    });
+    setScreen("galaxy");
+  };
+
   // Trouble words: launch practice session with trouble words
   const startTroubleWords = () => {
     const allWords = LW.flat();
@@ -283,7 +306,7 @@ export default function App() {
 
       {screen === "galaxy" && profile && (
         <>
-          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} onTroubleWords={getTroubleWords(profile, LW.flat()).length > 0 ? startTroubleWords : null} onAchievements={() => setShowAchievements(true)} />
+          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} onTroubleWords={getTroubleWords(profile, LW.flat()).length > 0 ? startTroubleWords : null} onAchievements={() => setShowAchievements(true)} onDaily={startDaily} />
           {showSaberPicker && <SaberPicker profile={profile} onSelect={(i, c) => { handleSaberSelect(i, c); }} onClose={() => setShowSaberPicker(false)} />}
         </>
       )}
@@ -303,6 +326,10 @@ export default function App() {
           </>
         );
       })()}
+
+      {screen === "daily" && profile && (
+        <DailyChallenge profile={profile} onComplete={onDailyComplete} onExit={() => setScreen("galaxy")} />
+      )}
 
       {screen === "victory" && selPlanet && (() => {
         const pl = PLANETS[selPlanet - 1];

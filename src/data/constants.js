@@ -70,4 +70,6 @@ export const DEFP = {
   wordFails: {},
   planetsCompleted: [],
   unlockedAchievements: [],
+  dailyStreak: 0,
+  lastDailyDate: "",
 };

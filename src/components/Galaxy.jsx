@@ -7,7 +7,7 @@ import Nebula from "./Nebula";
 import ForceParticles from "./ForceParticles";
 import MuteBtn from "./MuteBtn";
 
-const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAchievements }) => {
+const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAchievements, onDaily }) => {
   const [hov, setHov] = useState(null);
   const [lore, setLore] = useState(null);
   const loreTimer = useRef(null);
@@ -90,6 +90,12 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAc
           setLore(LORE[Math.floor(Math.random() * LORE.length)]);
           loreTimer.current = setTimeout(() => setLore(null), 5000);
         }} style={{ background: "#12122A", border: "1px solid #2a2a4a", borderRadius: 8, color: "#8888CC", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>✦ ARCHIVES</button>
+        {(() => {
+          const d = new Date();
+          const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const done = profile.lastDailyDate === today;
+          return <button onClick={done ? undefined : onDaily} style={{ background: done ? "#0A0A18" : "#12122A", border: `1px solid ${done ? "#44AA4444" : "#66CCFF44"}`, borderRadius: 8, color: done ? "#44AA44" : "#66CCFF", fontSize: 11, padding: "8px 14px", cursor: done ? "default" : "pointer", opacity: done ? 0.6 : 1 }}>{done ? "✓ DAILY DONE" : "☀ DAILY"}{profile.dailyStreak > 0 && ` (${profile.dailyStreak}🔥)`}</button>;
+        })()}
         <button onClick={onAchievements} style={{ background: "#12122A", border: "1px solid #FFD70044", borderRadius: 8, color: "#FFD700", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>🏆 ACHIEVEMENTS</button>
         <button onClick={onSaberPick} style={{ background: "#12122A", border: `1px solid ${saber.c}44`, borderRadius: 8, color: saber.c, fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>⚔ LIGHTSABER</button>
         {onTroubleWords && <button onClick={onTroubleWords} style={{ background: "#12122A", border: "1px solid #EE444444", borderRadius: 8, color: "#EE6666", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>⚔ TROUBLE WORDS</button>}
