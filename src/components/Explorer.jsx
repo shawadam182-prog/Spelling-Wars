@@ -8,7 +8,7 @@ import ForceParticles from "./ForceParticles";
 import MuteBtn from "./MuteBtn";
 import ForceMeter from "./ForceMeter";
 
-const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle, onBoss, onCollect, onExit }) => {
+const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, defeated, onBattle, onBoss, onCollect, onExit }) => {
   const [pos, setPos] = useState({ x: 0, y: GS - 1 });
   const [dir, setDir] = useState({ x: 1, y: 0 });
   const [map, setMap] = useState(null);
@@ -85,6 +85,11 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
         showMsg(`📦 ${hc[Math.floor(Math.random() * hc.length)]}`, 5000);
         setEnts((p) => p.filter((e) => e.id !== ent.id));
         onCollect("score", 50);
+      } else if (ent.type === "ration") {
+        sfx("pip");
+        onCollect("ration", 1);
+        setEnts((p) => p.filter((e) => e.id !== ent.id));
+        showMsg("🍖 Ration pack! +1 Force restored!", 1800);
       } else if (ent.type === "boss") {
         if (bossOk) {
           sfx("boss");
@@ -127,11 +132,15 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
             <MuteBtn />
           </div>
         </div>
+        <div style={{ marginBottom: 6 }}>
+          <ForceMeter cur={force ?? 5} max={maxForce ?? 5} saberIdx={profile.lightsaberColor} />
+        </div>
         <div style={{ display: "flex", gap: 16, alignItems: "center", fontSize: 11, color: "#888" }}>
           <span>Enemies: <b style={{ color: def >= total ? "#44CC44" : "#FFE066" }}>{def}/{total}</b></span>
           <span>Kyber: <b style={{ color: "#66CCFF" }}>{profile.kyberCrystals}</b></span>
           {bossOk && <span style={{ color: "#EE6666", animation: "planetPulse 1.5s infinite" }}>✦ BOSS UNLOCKED</span>}
         </div>
+        {force <= 2 && <div style={{ fontSize: 10, color: "#EE4444", letterSpacing: 1, marginTop: 4, animation: "planetPulse 1s infinite", textAlign: "center" }}>⚠ FORCE CRITICALLY LOW ⚠</div>}
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 10, padding: 16 }}>
         {msg && <div style={{ position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)", background: "#12122AEE", border: "1px solid #FFE06633", borderRadius: 8, padding: "10px 18px", fontSize: 13, color: "#CCCCDD", zIndex: 30, maxWidth: 320, textAlign: "center", animation: "fadeSlideUp .3s", boxShadow: "0 4px 20px rgba(0,0,0,.5)" }}>{msg}</div>}
@@ -147,7 +156,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
               <div key={`${x}-${y}`} onClick={() => { const dx = x - pos.x, dy = y - pos.y; if (Math.abs(dx) + Math.abs(dy) === 1) move(dx, dy); }} style={{ width: ts, height: ts, background: bg, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer", fontSize: ts * 0.5 }}>
                 {cell === 1 && <span style={{ fontSize: ts * 0.45, opacity: 0.6 }}>{planet.we}</span>}
                 {cell === 2 && <span style={{ fontSize: ts * 0.4, opacity: 0.5 }}>{planet.he}</span>}
-                {ent && !isP && ent.type !== "decor" && <span style={{ fontSize: ts * 0.5, position: "absolute", zIndex: 5, animation: ent.type === "boss" ? (bossOk ? "entityBob 1s infinite" : "none") : ent.type === "enemy" ? "entityBob 1.5s infinite" : "none", opacity: ent.type === "boss" && !bossOk ? 0.4 : 1, filter: ent.type === "boss" && bossOk ? `drop-shadow(0 0 6px ${planet.c})` : "none" }}>{ent.emoji}</span>}
+                {ent && !isP && ent.type !== "decor" && <span style={{ fontSize: ts * 0.5, position: "absolute", zIndex: 5, animation: ent.type === "boss" ? (bossOk ? "entityBob 1s infinite" : "none") : "entityBob 1.5s infinite", opacity: ent.type === "boss" && !bossOk ? 0.4 : 1, filter: ent.type === "boss" && bossOk ? `drop-shadow(0 0 6px ${planet.c})` : ent.type === "ration" ? "drop-shadow(0 0 4px #FFE066)" : "none" }}>{ent.emoji}</span>}
                 {ent && ent.type === "decor" && !isP && <span style={{ fontSize: ts * 0.35, opacity: 0.4 }}>{ent.emoji}</span>}
                 {isP && <div style={{ position: "absolute", zIndex: 10, fontSize: ts * 0.55, filter: `drop-shadow(0 0 6px ${saber.c})`, transform: dir.x < 0 ? "scaleX(-1)" : "none" }}>🥷</div>}
               </div>

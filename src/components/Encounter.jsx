@@ -38,7 +38,7 @@ const Encounter = ({ word, planet, pi, profile, onResult }) => {
     } else {
       setResult("no"); sfx("no"); setSk((k) => k + 1);
       logSpellingAttempt(profile.username, word, false, { level: profile.level });
-      timerRef.current = setTimeout(() => { setTyped(""); setResult(null); inp.current?.focus(); }, 1500);
+      timerRef.current = setTimeout(() => onResult(false), 1800);
     }
   };
 

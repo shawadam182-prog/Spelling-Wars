@@ -79,6 +79,7 @@ export const genMap = (pi, words) => {
     place("kyber", "💎", null);
     place("kyber", "💎", null);
     place("holocron", "📦", null);
+    place("ration", "🍖", null);
     pl.fe.forEach((e) => place("decor", e, null));
     ents.push({ id: "boss", type: "boss", x: GS - 1, y: 0, emoji: BOSSES[pi].icon, word: null });
     return { grid: g, entities: ents };

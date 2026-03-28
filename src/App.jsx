@@ -32,6 +32,7 @@ export default function App() {
   const [hyperspace, setHyperspace] = useState(false);
   const [pendingScreen, setPendingScreen] = useState(null);
   const [showSaberPicker, setShowSaberPicker] = useState(false);
+  const [exForce, setExForce] = useState(5);
 
   const save = useCallback(async (p) => { await saveProgress(p); }, []);
 
@@ -83,6 +84,9 @@ export default function App() {
     setEncWord(null);
     setShowBoss(false);
     setExScore(practiceMode ? 0 : profile.totalScore);
+    // Later levels get more starting Force
+    const lvl = selPlanet || profile.level;
+    setExForce(lvl >= 7 ? 8 : lvl >= 4 ? 6 : 5);
     goTo("explore");
   };
 
@@ -108,11 +112,26 @@ export default function App() {
           },
         });
       }
+    } else {
+      // Wrong answer drains Force
+      setExForce((f) => {
+        const nf = f - 1;
+        if (nf <= 0) {
+          // Mission failed — delay slightly so player sees the result
+          setTimeout(() => setScreen("failed"), 800);
+        }
+        return nf;
+      });
     }
     setEncWord(null);
   };
 
   const collect = (t, a) => {
+    if (t === "ration") {
+      // Ration packs always restore Force, even in practice
+      setExForce((f) => Math.min(f + 1, 10));
+      return;
+    }
     if (practiceMode) return;
     if (t === "kyber") upd({ kyberCrystals: (profile?.kyberCrystals || 0) + a });
     else if (t === "score") {
@@ -189,7 +208,7 @@ export default function App() {
         const pl = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
         return (
           <>
-            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onExit={() => setScreen("galaxy")} />
+            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onExit={() => setScreen("galaxy")} />
             {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} onResult={battleResult} />}
             {showBoss && <BossBattle boss={b} pi={selPlanet - 1} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
           </>
@@ -209,6 +228,22 @@ export default function App() {
               {!practiceMode && <p style={{ fontSize: 13, color: "#66CCFF", marginTop: 6 }}>+5 Kyber Crystals earned!</p>}
               {practiceMode && <p style={{ fontSize: 13, color: "#44AA44", marginTop: 12 }}>Great practice session!</p>}
               <button onClick={() => setScreen("galaxy")} style={{ marginTop: 24, padding: "12px 32px", fontSize: 15, fontWeight: 700, letterSpacing: 3, background: "#FFE06615", border: "1px solid #FFE06644", borderRadius: 8, color: "#FFE066", cursor: "pointer" }}>▸ CONTINUE</button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {screen === "failed" && selPlanet && (() => {
+        const pl = PLANETS[selPlanet - 1];
+        return (
+          <div style={{ minHeight: "100vh", background: "#05050F", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
+            <Stars n={40} />
+            <div style={{ position: "relative", zIndex: 10, textAlign: "center", padding: 20 }}>
+              <div style={{ fontSize: 56, marginBottom: 16, animation: "bossPulse 1.5s infinite", filter: "drop-shadow(0 0 20px #EE444466)" }}>💀</div>
+              <h1 style={{ fontSize: 30, fontWeight: 900, color: "#EE4444", letterSpacing: 4, textShadow: "0 0 30px #EE444444" }}>MISSION FAILED</h1>
+              <p style={{ fontSize: 14, color: "#AA6666", marginTop: 10 }}>Your Force was depleted on {pl.name}...</p>
+              <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>Study the words and try again, young Jedi.</p>
+              <button onClick={() => setScreen("galaxy")} style={{ marginTop: 24, padding: "12px 32px", fontSize: 14, fontWeight: 700, letterSpacing: 2, background: "#EE444422", border: "1px solid #EE444466", borderRadius: 8, color: "#FFE066", cursor: "pointer" }}>RETURN TO GALAXY MAP</button>
             </div>
           </div>
         );
