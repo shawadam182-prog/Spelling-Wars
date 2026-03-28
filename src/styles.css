@@ -152,6 +152,13 @@
   100% { transform: scale(4); opacity: 0; }
 }
 
+/* ── Wordle tile reveal ── */
+@keyframes tileReveal {
+  0% { transform: scaleY(0); opacity: 0; }
+  50% { transform: scaleY(1.1); }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+
 /* ── Encounter slide up ── */
 @keyframes encounterAppear {
   0% { opacity: 0; transform: scale(0.95) translateY(20px); }

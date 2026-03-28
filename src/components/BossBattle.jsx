@@ -7,6 +7,7 @@ import Stars from "./Stars";
 import Nebula from "./Nebula";
 import ForceParticles from "./ForceParticles";
 import ForceMeter from "./ForceMeter";
+import WordTiles from "./WordTiles";
 import Keyboard from "./Keyboard";
 
 const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
@@ -232,10 +233,10 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
 
         <div style={{ fontSize: 15, color: "#AABB", textAlign: "center", maxWidth: 400, lineHeight: 1.6, marginBottom: 12 }}>{result === "ok" ? sn.full : sn.masked}</div>
         <button onClick={() => say(cw)} style={{ marginBottom: 10, padding: "5px 14px", fontSize: 12, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
-        <div key={sk} style={{ fontSize: 30, fontWeight: 800, letterSpacing: 6, textAlign: "center", color: result === "ok" ? "#44CC44" : result === "no" ? "#EE4444" : "#FFE066", fontFamily: "monospace", minHeight: 40, marginBottom: 8, animation: result === "no" ? "headShake .5s" : "none" }}>
-          {typed || <span style={{ color: "#333", fontSize: 12, letterSpacing: 2 }}>TYPE THE WORD...</span>}
+        <div key={sk} style={{ marginBottom: 8, animation: result === "no" ? "headShake .5s" : "none" }}>
+          <WordTiles typed={typed} word={cw} result={result} saber={saber} />
         </div>
-        {result && <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 8, color: result === "ok" ? "#44CC44" : "#EE4444", animation: "fadeSlideUp .3s" }}>{result === "ok" ? "✦ DIRECT HIT!" : `MISS! THE WORD WAS: ${cw.toUpperCase()}`}</div>}
+        {result && <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 8, color: result === "ok" ? "#44CC44" : "#EE4444", animation: "fadeSlideUp .3s" }}>{result === "ok" ? "✦ DIRECT HIT!" : "MISS!"}</div>}
         <input ref={inp} type="text" value={typed} onChange={(e) => { if (!result) setTyped(e.target.value.toLowerCase()); }} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
         <Keyboard onKey={(k) => { if (!result) { setTyped((t) => t + k); inp.current?.focus(); } }} onDel={() => { if (!result) setTyped((t) => t.slice(0, -1)); }} onSubmit={submit} typed={typed.trim()} result={result} saber={saber} />
       </div>

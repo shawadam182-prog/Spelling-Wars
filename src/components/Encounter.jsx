@@ -4,6 +4,7 @@ import { sfx, say } from "../utils/audio.js";
 import { getSaber, sent } from "../utils/helpers.js";
 import { logSpellingAttempt } from "../services/supabase.js";
 import ForceParticles from "./ForceParticles";
+import WordTiles from "./WordTiles";
 import Keyboard from "./Keyboard";
 
 const Encounter = ({ word, planet, pi, profile, onResult }) => {
@@ -146,12 +147,12 @@ const Encounter = ({ word, planet, pi, profile, onResult }) => {
 
       <button onClick={() => say(word)} style={{ marginBottom: 8, padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
 
-      {/* Typed word display */}
-      <div key={sk} style={{ fontSize: 30, fontWeight: 800, letterSpacing: 6, textAlign: "center", color: result === "ok" ? "#44CC44" : result === "no" ? "#EE4444" : "#FFE066", fontFamily: "monospace", minHeight: 40, marginBottom: 6, animation: result === "no" ? "headShake .5s" : "none" }}>
-        {typed || <span style={{ color: "#333", fontSize: 12, letterSpacing: 2 }}>TYPE THE WORD...</span>}
+      {/* Wordle-style letter tiles */}
+      <div key={sk} style={{ marginBottom: 6, animation: result === "no" ? "headShake .5s" : "none" }}>
+        <WordTiles typed={typed} word={word} result={result} saber={saber} />
       </div>
 
-      {result && <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 8, color: result === "ok" ? "#44CC44" : "#EE4444", animation: "fadeSlideUp .3s" }}>{result === "ok" ? "✦ CORRECT! +100" : `✗ THE WORD WAS: ${word.toUpperCase()}`}</div>}
+      {result && <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 8, color: result === "ok" ? "#44CC44" : "#EE4444", animation: "fadeSlideUp .3s" }}>{result === "ok" ? "✦ CORRECT! +100" : "✗ WRONG!"}</div>}
       {result === "no" && <div style={{ fontSize: 11, color: "#AA666688", marginBottom: 6 }}>-1 Force</div>}
 
       <input ref={inp} type="text" value={typed} onChange={(e) => { if (!result) setTyped(e.target.value.toLowerCase()); }} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
