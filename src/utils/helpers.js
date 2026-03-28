@@ -38,7 +38,7 @@ export const canReach = (grid, sx, sy, tx, ty) => {
     if (cx === tx && cy === ty) return true;
     for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
       const nx = cx + dx, ny = cy + dy;
-      if (nx >= 0 && ny >= 0 && nx < GS && ny < GS && !v.has(`${nx},${ny}`) && grid[ny][nx] !== 1) {
+      if (nx >= 0 && ny >= 0 && nx < GS && ny < GS && !v.has(`${nx},${ny}`) && grid[ny][nx] === 0) {
         v.add(`${nx},${ny}`);
         q.push([nx, ny]);
       }
@@ -110,8 +110,36 @@ export const genMap = (pi, words) => {
       }
     }
 
-    // Re-validate after hazards (hazards block movement)
+    // Re-validate after hazards
     if (!canReach(g, spawn.x, spawn.y, bossPos.x, bossPos.y)) continue;
+
+    // Interactive terrain: soft walls (3) — wall tiles between two floor areas
+    let sw = 0;
+    for (let t = 0; t < 60 && sw < 3; t++) {
+      const x = 1 + Math.floor(Math.random() * (GS - 2));
+      const y = 1 + Math.floor(Math.random() * (GS - 2));
+      if (g[y][x] !== 1) continue;
+      const hPath = g[y][x - 1] === 0 && g[y][x + 1] === 0;
+      const vPath = g[y - 1][x] === 0 && g[y + 1][x] === 0;
+      if (hPath || vPath) { g[y][x] = 3; sw++; }
+    }
+
+    // Interactive terrain: jumpable hazards (4) — convert 1 hazard to jumpable
+    for (let y = 0; y < GS; y++)
+      for (let x = 0; x < GS; x++)
+        if (g[y][x] === 2) { g[y][x] = 4; y = GS; break; }
+
+    // Interactive terrain: locked door (5) — place 1 on non-main-path floor
+    for (let t = 0; t < 40; t++) {
+      const x = Math.floor(Math.random() * GS), y = Math.floor(Math.random() * GS);
+      if (g[y][x] !== 0 || inRoom(x, y)) continue;
+      if (x === spawn.x && y === spawn.y) continue;
+      if (x === bossPos.x && y === bossPos.y) continue;
+      // Test: if we block this tile, can we still reach boss?
+      g[y][x] = 5;
+      if (canReach(g, spawn.x, spawn.y, bossPos.x, bossPos.y)) break;
+      g[y][x] = 0; // revert if it blocks main path
+    }
 
     // Place entities
     const ents = [];
