@@ -185,6 +185,256 @@ const WS = {
   women: "Mummy is the woman who drinks the most tea in the house.",
 };
 
+// ─── PLANET NARRATIVE ────────────────────────────────────────────────────────
+
+const PLANET_NARRATIVE = [
+  // 0: Tatooine
+  {
+    missionBrief: "Tusken Raiders have seized the moisture farms and are blocking trade routes across the Dune Sea. The settlers need a Jedi to restore order and protect the innocent.",
+    encounterIntros: [
+      "A Tusken Raider leaps from behind a sandstone ridge, gaffi stick raised!",
+      "A womp rat scurries from a cave, baring its teeth at you!",
+      "A Jawa thief darts from the shadows, clutching stolen parts!",
+    ],
+    wallMsg: "Solid sandstone — even a lightsaber would take hours to cut through!",
+    hazardMsg: "Scorching sand dunes — the twin suns have made this ground lethal!",
+    kyberMsgs: ["A crystal glints beneath the sand, drawn to your presence!", "Hidden in an old moisture vaporator — a gift from the Force!"],
+    holocrons: [
+      "Tatooine orbits two suns — Tatoo I and Tatoo II. That's why the sunsets are so beautiful!",
+      "Anakin Skywalker grew up here as a slave before becoming a Jedi — and later, Darth Vader.",
+      "Jawas travel in massive Sandcrawlers and collect scrap technology to sell to moisture farmers.",
+    ],
+    victoryLine: "The moisture farms are safe once more. Grateful settlers wave as your ship lifts off into the twin sunset.",
+  },
+  // 1: Dagobah
+  {
+    missionBrief: "Dark Side energy is corrupting Dagobah's ancient swamps. Master Yoda's old training ground must be cleansed before the corruption spreads across the galaxy.",
+    encounterIntros: [
+      "A massive swamp beast surfaces from the murky water, jaws snapping!",
+      "A bog snake slithers across your path, hissing with dark energy!",
+      "A dark vision appears — a shadow of your deepest fear takes form!",
+    ],
+    wallMsg: "Gnarled roots form an impassable wall of ancient wood.",
+    hazardMsg: "Toxic swamp gas bubbles up — one breath could knock you out!",
+    kyberMsgs: ["The swamp glows faintly — a crystal rests on a mossy stone!", "Yoda's spirit guides you to a crystal hidden in hollow roots!"],
+    holocrons: [
+      "Yoda chose Dagobah to hide because the planet's strong Force energy masked his presence from the Sith.",
+      "Luke Skywalker trained here and famously failed to lift his X-wing from the swamp — but Yoda did it easily!",
+      "The Dark Side Cave on Dagobah shows visitors visions of their greatest fears.",
+    ],
+    victoryLine: "The dark corruption fades. Fireflies return to the swamp, and you sense Yoda's gentle presence approving your work.",
+  },
+  // 2: Hoth
+  {
+    missionBrief: "Imperial probe droids have located a hidden Rebel outpost on Hoth. You must secure the base and destroy the droids before the Empire sends a full invasion force.",
+    encounterIntros: [
+      "A towering Wampa charges from an ice cave, roaring with fury!",
+      "An Imperial probe droid hovers into view, scanning for Rebel signals!",
+      "A Snowtrooper emerges from the blizzard, blaster raised!",
+    ],
+    wallMsg: "A wall of solid ice — centuries old and harder than durasteel.",
+    hazardMsg: "A crevasse of deep blue ice — one wrong step and you'd fall forever!",
+    kyberMsgs: ["Frozen in glacial ice for millennia — the Force kept this crystal safe!", "A Rebel scout left this crystal here, hoping a Jedi would find it!"],
+    holocrons: [
+      "The Rebel Alliance chose Hoth because its extreme cold made it nearly impossible for Imperial sensors to detect life signs.",
+      "Tauntauns are used as mounts on Hoth because mechanical vehicles freeze up in the extreme cold.",
+      "The Battle of Hoth was one of the Rebel Alliance's worst defeats — they lost Echo Base to Darth Vader's forces.",
+    ],
+    victoryLine: "The probe droids are destroyed. Echo Base is secure, and the Rebel Alliance can regroup in safety.",
+  },
+  // 3: Endor
+  {
+    missionBrief: "Imperial forces have built a shield generator on Endor's forest moon, protecting a new weapon in orbit. The Ewoks need Jedi help to destroy it and free their home.",
+    encounterIntros: [
+      "A Scout Trooper on a speeder bike skids to a halt and draws his blaster!",
+      "An Imperial Guard steps from behind a tree, force pike crackling with energy!",
+      "An AT-ST walker crashes through the trees, its cannons searching for you!",
+    ],
+    wallMsg: "Ancient Wroshyr-kin trees — their trunks are wider than starships!",
+    hazardMsg: "Dense undergrowth hides sharp thorns and venomous creatures!",
+    kyberMsgs: ["An Ewok shaman offers you a crystal — a sacred gift from the forest!", "Tucked in a tree hollow, glowing softly — the forest protected this crystal!"],
+    holocrons: [
+      "Ewoks are only about one metre tall but they helped the Rebel Alliance defeat the entire Imperial garrison on Endor!",
+      "The second Death Star was destroyed during the Battle of Endor — this is where the Empire truly fell.",
+      "Ewoks originally thought C-3PO was a golden god because of his shiny appearance!",
+    ],
+    victoryLine: "The shield generator explodes! Ewoks celebrate with drums and songs as the forest moon is finally free from Imperial control.",
+  },
+  // 4: Bespin
+  {
+    missionBrief: "Bounty hunters have taken over Cloud City's tibanna gas platforms. Lando Calrissian has called for Jedi assistance to liberate the floating city and restore trade.",
+    encounterIntros: [
+      "A bounty hunter drops from above, jet pack flaring, blasters drawn!",
+      "An Ugnaught worker, corrupted by credits, swings a heavy wrench at you!",
+      "A Bespin Wing Guard has been bribed — he blocks your path with a blaster!",
+    ],
+    wallMsg: "Reinforced city walls — Cloud City's architecture is built to last!",
+    hazardMsg: "An open shaft plunges into the clouds below — careful!",
+    kyberMsgs: ["Hidden in a tibanna gas canister — someone was smuggling this crystal!", "The clouds part briefly and sunlight reveals a crystal on a landing pad!"],
+    holocrons: [
+      "Cloud City floats in Bespin's atmosphere — it mines valuable tibanna gas used in blasters and hyperdrives.",
+      "This is where Darth Vader revealed to Luke that he was his father — one of the most famous moments in movie history!",
+      "Lando Calrissian won Cloud City in a card game called sabacc — talk about a lucky hand!",
+    ],
+    victoryLine: "The bounty hunters flee into the clouds. Lando thanks you as Cloud City's lights shimmer once more against the golden sky.",
+  },
+  // 5: Mustafar
+  {
+    missionBrief: "Sith acolytes are mining Mustafar's lava flows to forge dark side weapons. The volcanic fortress must be shut down before these weapons reach the galaxy.",
+    encounterIntros: [
+      "A lava flea leaps across the magma stream, its armoured legs clicking!",
+      "A mining droid gone rogue charges at you, drill spinning wildly!",
+      "A Sith Acolyte ignites a crimson blade and steps onto the lava bridge!",
+    ],
+    wallMsg: "Cooled magma rock — razor sharp and impossible to climb.",
+    hazardMsg: "Molten lava flows beneath — the heat alone could melt durasteel!",
+    kyberMsgs: ["Forged in volcanic heat, this crystal pulses with raw energy!", "A Sith dropped this crystal — the light side has reclaimed it!"],
+    holocrons: [
+      "Mustafar is where Anakin Skywalker fought Obi-Wan Kenobi and was so badly injured he had to become Darth Vader.",
+      "Darth Vader actually built his castle on Mustafar — right where he suffered his greatest defeat. Dramatic much?",
+      "Mustafar's lava is rich in unique minerals that can be used to create lightsaber crystals — but only the bravest try!",
+    ],
+    victoryLine: "The dark forge crumbles into the lava. You watch from your ship as Mustafar's volcanoes reclaim the Sith fortress.",
+  },
+  // 6: Kashyyyk
+  {
+    missionBrief: "Trandoshan slavers are capturing Wookiees from the great tree-cities. The Wookiee chieftain has sent a distress signal — only a Jedi can break the slavers' hold.",
+    encounterIntros: [
+      "A Trandoshan slaver hisses and raises his stun net launcher!",
+      "A Separatist battle droid marches through the undergrowth, blaster firing!",
+      "A jungle beast, maddened by the fighting, charges from the canopy!",
+    ],
+    wallMsg: "Massive Wroshyr tree roots — they've grown here for thousands of years!",
+    hazardMsg: "The Shadowlands below are pitch black — deadly predators lurk there!",
+    kyberMsgs: ["A Wookiee elder presents you with a crystal from the sacred grove!", "Woven into a Wroshyr vine, this crystal has absorbed the forest's Force energy!"],
+    holocrons: [
+      "Wookiees can live for over 400 years! Chewbacca was about 200 years old during the original Star Wars trilogy.",
+      "Kashyyyk's Wroshyr trees grow so tall that the lower levels, called the Shadowlands, never see sunlight.",
+      "Wookiees are incredibly strong — they can pull people's arms out of their sockets! Han Solo learned to never upset Chewbacca.",
+    ],
+    victoryLine: "The slavers' ships burn on the forest floor. Wookiees roar in triumph from the treetops as their home is freed.",
+  },
+  // 7: Kamino
+  {
+    missionBrief: "A rogue Kaminoan scientist is creating an illegal clone army for a mysterious buyer. Infiltrate the ocean facility and shut down the cloning operation.",
+    encounterIntros: [
+      "A Kaminoan sentry spots you and activates the facility's defences!",
+      "A defective clone trooper, confused and aggressive, attacks on sight!",
+      "A massive sea beast smashes through the facility wall, tentacles thrashing!",
+    ],
+    wallMsg: "Sealed blast doors — Kamino's facilities are built to withstand ocean storms.",
+    hazardMsg: "Crashing waves flood the corridor — the ocean is breaking in!",
+    kyberMsgs: ["Hidden in a cloning pod — this crystal was being studied by the Kaminoans!", "The ocean washes a glowing crystal through a broken viewport!"],
+    holocrons: [
+      "The entire Clone Army that fought for the Republic was created on Kamino — millions of soldiers, all cloned from bounty hunter Jango Fett.",
+      "It rains constantly on Kamino — the entire planet is covered by ocean with no dry land at all!",
+      "Kaminoans are expert geneticists — they can grow a fully trained clone soldier in just 10 years instead of the normal 20.",
+    ],
+    victoryLine: "The cloning vats power down. Storms clear as you depart, and the ocean swallows the evidence of the rogue operation.",
+  },
+  // 8: Coruscant
+  {
+    missionBrief: "Sith spies have infiltrated the Galactic Senate. Someone is corrupting senators from within. You must root out the dark agents before democracy falls.",
+    encounterIntros: [
+      "A Senate Guard, secretly a Sith agent, ignites a hidden blade!",
+      "A Sith Spy drops their disguise and lunges from the shadows!",
+      "A bounty droid rolls from an alley, weapons systems activating!",
+    ],
+    wallMsg: "Towering skyscrapers — Coruscant is one giant city with no way through!",
+    hazardMsg: "A bottomless gap between buildings — thousands of levels below!",
+    kyberMsgs: ["Buried beneath the Jedi Temple, this crystal waited for a worthy finder!", "A street vendor unknowingly sold you a genuine Kyber crystal!"],
+    holocrons: [
+      "Coruscant is one enormous city covering the entire planet — over a trillion beings live there across thousands of levels!",
+      "The Jedi Temple on Coruscant was built on top of an ancient Sith shrine — the dark side energy beneath it clouded the Jedi's vision.",
+      "The lowest levels of Coruscant, called the Underworld, haven't seen sunlight in thousands of years.",
+    ],
+    victoryLine: "The Sith agents are exposed. The Senate erupts in applause as democracy is preserved — the Republic stands strong tonight.",
+  },
+  // 9: Death Star
+  {
+    missionBrief: "This is it — the final mission. The Death Star's superlaser is charging. You must fight through the station's defences and reach the reactor core before it fires.",
+    encounterIntros: [
+      "A Stormtrooper patrol rounds the corner — 'Halt! You're not authorised!'",
+      "A Dark Trooper, enhanced with cybernetics, stomps towards you!",
+      "An Emperor's Royal Guard blocks the corridor, force pike humming!",
+    ],
+    wallMsg: "Blast-proof durasteel walls — this station was built to destroy planets!",
+    hazardMsg: "An energy conduit crackles with lethal power — don't touch!",
+    kyberMsgs: ["Ripped from the superlaser's focusing array — you've weakened the weapon!", "A fallen Jedi's crystal, left here during a previous failed mission!"],
+    holocrons: [
+      "The Death Star is 160 kilometres wide — that's bigger than most moons! It took years and millions of workers to build.",
+      "A tiny exhaust port, just 2 metres wide, was the Death Star's only weakness. Luke Skywalker made an impossible shot to destroy it!",
+      "The Death Star's superlaser drew its power from massive Kyber crystals — the same crystals Jedi use in their lightsabers, but corrupted.",
+    ],
+    victoryLine: "The reactor core explodes! Your ship streaks away as the Death Star shatters into a million pieces. The galaxy is finally free!",
+  },
+];
+
+// ─── BOSS DIALOGUE ──────────────────────────────────────────────────────────
+
+const BOSS_DIALOGUE = [
+  // 0: Darth Maul
+  {
+    taunts: ["My blade is double-ended — you cannot block them both!", "The Sith have waited generations for this revenge!", "You fight like a Padawan lost without their master!"],
+    hitReactions: ["Impossible! No one has struck me before!", "You'll pay for that, little Jedi!", "A lucky blow — it won't happen again!"],
+    defeatQuote: "Cut me down... and I will become more dangerous than you can imagine...",
+  },
+  // 1: Count Dooku
+  {
+    taunts: ["Your technique is sloppy — I trained under Yoda himself!", "The Republic is already crumbling. You fight for nothing.", "Elegant weapons require elegant spelling, young one."],
+    hitReactions: ["How crude! But... effective.", "You have some skill. It won't save you.", "Perhaps I underestimated your training."],
+    defeatQuote: "This was not... how it was supposed to end. The dark side promised me more...",
+  },
+  // 2: General Grievous
+  {
+    taunts: ["I have destroyed Jedi far more skilled than you!", "Your lightsaber will make a fine addition to my collection!", "Four arms, four blades — what chance do you have?"],
+    hitReactions: ["*cough cough* — That was just a lucky strike!", "My armour! You'll pay for scratching it!", "Retreat! Regroup! ...I mean, ATTACK!"],
+    defeatQuote: "My collection... all those lightsabers... lost... *cough*...",
+  },
+  // 3: Boba Fett
+  {
+    taunts: ["I always collect my bounty — always.", "Jedi tricks don't work on Mandalorian armour.", "My father trained me to hunt your kind."],
+    hitReactions: ["A hit? That armour costs more than your starship!", "Clever. But I've survived worse.", "You just made this personal, Jedi."],
+    defeatQuote: "Another day, another hunt... this isn't over between us.",
+  },
+  // 4: Jabba's Rancor
+  {
+    taunts: ["RAAAWWRR! *the ground shakes with each step*", "*SLAM* — The beast pounds its fists into the floor!", "GRRROOOAAAR! *drool splatters everywhere*"],
+    hitReactions: ["*The Rancor stumbles, confused by the pain!*", "*ROAR!* It's getting angrier!", "*The beast shakes its head, dazed by your strike!*"],
+    defeatQuote: "*The Rancor collapses with a thunderous crash... somewhere, its keeper weeps.*",
+  },
+  // 5: The Inquisitor
+  {
+    taunts: ["The Jedi are extinct — you're just the last ember to stamp out.", "My spinning blade will carve through your defences!", "Vader will reward me greatly for your defeat."],
+    hitReactions: ["The Temple taught you well... but not well enough!", "You dare strike an Inquisitor?!", "Pain only makes the dark side stronger!"],
+    defeatQuote: "There are other Inquisitors... they will finish what I started...",
+  },
+  // 6: Asajj Ventress
+  {
+    taunts: ["Two blades, one destiny — yours ends here!", "Count Dooku taught me everything about destroying Jedi.", "I am the night, the shadow, the end of your story."],
+    hitReactions: ["You fight well for a child of the light!", "That stung! But I've felt worse betrayals.", "Impressive! But rage fuels my power!"],
+    defeatQuote: "In the end... neither Jedi nor Sith claimed me. I was always... something else.",
+  },
+  // 7: Darth Vader
+  {
+    taunts: ["I find your lack of spelling... disturbing.", "You are unwise to lower your defences!", "The Force is with you, young one, but you are not a Jedi yet."],
+    hitReactions: ["Impressive... most impressive.", "You have learned much, young one.", "Your feelings betray you — but your spelling does not."],
+    defeatQuote: "Tell your master... there is still good in me... I feel it...",
+  },
+  // 8: Emperor Palpatine
+  {
+    taunts: ["Your feeble skills are no match for the power of the dark side!", "Strike me down and your journey to the dark side will be complete!", "Everything is proceeding exactly as I have foreseen..."],
+    hitReactions: ["How?! The dark side showed me victory!", "Impossible! I am the Senate!", "Your resistance is... unexpected."],
+    defeatQuote: "Power... unlimited power... slipping away... how could a mere child...",
+  },
+  // 9: Kylo Ren
+  {
+    taunts: ["I will finish what Darth Vader started!", "You're nothing — you come from nothing!", "Let the past die. Kill it if you have to."],
+    hitReactions: ["That lightsaber belongs to ME!", "Pain fuels my connection to the dark side!", "You think you can beat the master of the Knights of Ren?!"],
+    defeatQuote: "Maybe the light was always calling to me... maybe I was always Ben...",
+  },
+];
+
 const DEFP = {
   username: "",
   level: 1,
@@ -388,20 +638,7 @@ const ForceParticles = ({ count = 15, color = "#FFE066" }) => {
   );
 };
 
-// ─── BOSS TAUNTS ────────────────────────────────────────────────────────────
-
-const BOSS_TAUNTS = [
-  "Your spelling is as weak as your training!",
-  "The dark side cannot be defeated by words!",
-  "I expected more from a Jedi!",
-  "Another mistake... how disappointing.",
-  "The Force is WEAK with this one!",
-  "Give up now, youngling!",
-  "Your master would be ashamed!",
-  "I sense great fear in you...",
-  "You cannot win this fight!",
-  "Pathetic!",
-];
+// (Boss dialogue moved to BOSS_DIALOGUE array near PLANET_NARRATIVE)
 
 // ─── HYPERSPACE OVERLAY ─────────────────────────────────────────────────────
 
@@ -672,8 +909,8 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
     const cur = posRef.current;
     const nx = cur.x + dx, ny = cur.y + dy;
     if (nx < 0 || ny < 0 || nx >= GS || ny >= GS) return;
-    if (map.grid[ny][nx] === 1) { showMsg("Blocked!"); return; }
-    if (map.grid[ny][nx] === 2) { showMsg("Hazardous terrain!"); return; }
+    if (map.grid[ny][nx] === 1) { showMsg(PLANET_NARRATIVE[pi].wallMsg); return; }
+    if (map.grid[ny][nx] === 2) { showMsg(PLANET_NARRATIVE[pi].hazardMsg); return; }
 
     sfx("step");
     const newPos = { x: nx, y: ny };
@@ -688,11 +925,12 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
         sfx("pip");
         onCollect("kyber", 2);
         setEnts((p) => p.filter((e) => e.id !== ent.id));
-        showMsg("✦ +2 Kyber Crystals!", 1500);
+        const km = PLANET_NARRATIVE[pi].kyberMsgs;
+        showMsg(`💎 ${km[Math.floor(Math.random() * km.length)]} +2 Kyber Crystals!`, 2500);
       } else if (ent.type === "holocron") {
         sfx("pip");
-        const l = LORE[Math.floor(Math.random() * LORE.length)];
-        showMsg(`📦 ${l}`, 4000);
+        const hc = PLANET_NARRATIVE[pi].holocrons;
+        showMsg(`📦 ${hc[Math.floor(Math.random() * hc.length)]}`, 5000);
         setEnts((p) => p.filter((e) => e.id !== ent.id));
         onCollect("score", 50);
       } else if (ent.type === "boss") {
@@ -778,7 +1016,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, defeated, onBattle,
 
 // ─── SPELLING ENCOUNTER ─────────────────────────────────────────────────────
 
-const Encounter = ({ word, planet, profile, onResult }) => {
+const Encounter = ({ word, planet, pi, profile, onResult }) => {
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState(null);
   const [sk, setSk] = useState(0);
@@ -786,7 +1024,9 @@ const Encounter = ({ word, planet, profile, onResult }) => {
   const sn = useMemo(() => sent(word), [word]);
   const saber = getSaber(profile.lightsaberColor);
   const inp = useRef(null);
-  const enRef = useRef(planet.en[Math.floor(Math.random() * planet.en.length)]);
+  const enIdx = useRef(Math.floor(Math.random() * planet.en.length));
+  const enRef = useRef(planet.en[enIdx.current]);
+  const narrativeIntro = PLANET_NARRATIVE[pi]?.encounterIntros[enIdx.current] || "";
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -821,6 +1061,7 @@ const Encounter = ({ word, planet, profile, onResult }) => {
       <div style={{ textAlign: "center", marginBottom: 14 }}>
         <div style={{ fontSize: 11, color: "#EE666688", letterSpacing: 2 }}>ENCOUNTER</div>
         <div style={{ fontSize: 14, color: planet.c, fontWeight: 700, letterSpacing: 1, marginTop: 4 }}>{enRef.current}</div>
+        {narrativeIntro && <div style={{ fontSize: 11, color: "#8888AA", fontStyle: "italic", marginTop: 6, maxWidth: 340, lineHeight: 1.5 }}>{narrativeIntro}</div>}
       </div>
       <div style={{ fontSize: 15, color: "#AABB", textAlign: "center", maxWidth: 400, padding: "0 20px", lineHeight: 1.6, marginBottom: 14 }}>{result === "ok" ? sn.full : sn.masked}</div>
       <button onClick={() => say(word)} style={{ marginBottom: 12, padding: "6px 16px", fontSize: 12, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
@@ -836,7 +1077,7 @@ const Encounter = ({ word, planet, profile, onResult }) => {
 
 // ─── BOSS BATTLE ────────────────────────────────────────────────────────────
 
-const BossBattle = ({ boss, words, planet, profile, onWin, onLose }) => {
+const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const [round, setRound] = useState(0);
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState(null);
@@ -886,7 +1127,9 @@ const BossBattle = ({ boss, words, planet, profile, onWin, onLose }) => {
 
   const doFlash = (color, ms = 500) => { setFlash(color); after(() => setFlash(null), ms); };
   const doShake = (ms = 400) => { setShake(true); after(() => setShake(false), ms); };
-  const doTaunt = () => { const t = BOSS_TAUNTS[Math.floor(Math.random() * BOSS_TAUNTS.length)]; setTaunt(t); after(() => setTaunt(null), 2200); };
+  const bd = BOSS_DIALOGUE[pi] || BOSS_DIALOGUE[0];
+  const doTaunt = () => { const t = bd.taunts[Math.floor(Math.random() * bd.taunts.length)]; setTaunt(t); after(() => setTaunt(null), 2200); };
+  const doHitReact = () => { const t = bd.hitReactions[Math.floor(Math.random() * bd.hitReactions.length)]; setTaunt(t); after(() => setTaunt(null), 2000); };
 
   // Phase: intro
   useEffect(() => {
@@ -908,7 +1151,7 @@ const BossBattle = ({ boss, words, planet, profile, onWin, onLose }) => {
     if (typed.trim().toLowerCase() === cw.toLowerCase()) {
       // ── CORRECT HIT ──
       setResult("ok"); sfx("ok"); setShowSlash(true);
-      setBossAnim("recoil"); doFlash("green"); triggerSparks(16); triggerRings(3);
+      setBossAnim("recoil"); doFlash("green"); triggerSparks(16); triggerRings(3); doHitReact();
       const nh = hp - 1; setHp(nh);
       logSpellingAttempt(profile.username, cw, true, { level: profile.level, isBossBattle: true });
       after(() => { setBossAnim("idle"); setShowSlash(false); }, 600);
@@ -985,6 +1228,7 @@ const BossBattle = ({ boss, words, planet, profile, onWin, onLose }) => {
         <div style={{ fontSize: 56, marginBottom: 16, animation: "planetFloat 2s infinite", filter: "drop-shadow(0 0 20px #FFE066)" }}>✦</div>
         <h1 style={{ fontSize: 38, fontWeight: 900, color: "#FFE066", letterSpacing: 4, textShadow: "0 0 30px #FFE06644, 0 0 60px #FFE06622" }}>{boss.name.toUpperCase()}</h1>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: "#44CC44", letterSpacing: 3, margin: "4px 0", textShadow: "0 0 20px #44CC4444" }}>DEFEATED!</h2>
+        <p style={{ fontSize: 13, color: "#EE666688", fontStyle: "italic", marginTop: 10, maxWidth: 320 }}>"{bd.defeatQuote}"</p>
         <p style={{ fontSize: 16, color: planet.c, marginTop: 12 }}>{planet.name} is free!</p>
         <button onClick={onWin} style={{ marginTop: 28, padding: "14px 36px", fontSize: 15, fontWeight: 700, letterSpacing: 3, background: "#FFE06615", border: "1px solid #FFE06644", borderRadius: 8, color: "#FFE066", cursor: "pointer" }}>▸ CONTINUE</button>
       </div>
@@ -1183,7 +1427,7 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick }) => {
 
 // ─── BRIEFING ───────────────────────────────────────────────────────────────
 
-const Briefing = ({ planet, boss, words, profile, isPractice, onStart, onBack }) => {
+const Briefing = ({ planet, pi, boss, words, profile, isPractice, onStart, onBack }) => {
   const [show, setShow] = useState(false);
   const saber = getSaber(profile.lightsaberColor);
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t); }, []);
@@ -1194,7 +1438,8 @@ const Briefing = ({ planet, boss, words, profile, isPractice, onStart, onBack })
         <div style={{ width: 90, height: 90, borderRadius: "50%", margin: "0 auto 16px", background: `radial-gradient(circle at 35% 35%,${planet.c}CC,${planet.c}44)`, boxShadow: `0 0 40px ${planet.gc}`, animation: "planetFloat 4s infinite" }} />
         <div style={{ fontSize: 10, color: isPractice ? "#44AA4488" : "#FFE06666", letterSpacing: 4 }}>{isPractice ? "PRACTICE MISSION" : "MISSION BRIEFING"}</div>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: planet.c, margin: "4px 0", letterSpacing: 3, textShadow: `0 0 20px ${planet.gc}` }}>{planet.name.toUpperCase()}</h1>
-        <p style={{ fontSize: 13, color: "#8888AA", fontStyle: "italic", margin: "0 0 20px" }}>"{planet.desc}"</p>
+        <p style={{ fontSize: 13, color: "#8888AA", fontStyle: "italic", margin: "0 0 12px" }}>"{planet.desc}"</p>
+        {PLANET_NARRATIVE[pi]?.missionBrief && <p style={{ fontSize: 12, color: "#AABB", lineHeight: 1.7, margin: "0 0 16px", padding: "10px 14px", background: "#0A0A1A88", borderLeft: `2px solid ${planet.c}44`, borderRadius: 4 }}>{PLANET_NARRATIVE[pi].missionBrief}</p>}
         {isPractice && <div style={{ fontSize: 11, color: "#44AA44", background: "#44AA4415", padding: "4px 12px", borderRadius: 4, display: "inline-block", marginBottom: 12 }}>Practice — no rank or score changes</div>}
         <div style={{ background: "#0A0A1A", border: "1px solid #1a1a3a", borderRadius: 12, padding: 18, textAlign: "left" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
@@ -1429,7 +1674,7 @@ export default function App() {
 
       {screen === "briefing" && profile && selPlanet && (() => {
         const p = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
-        return <Briefing planet={p} boss={b} words={w} profile={profile} isPractice={practiceMode} onStart={startExplore} onBack={() => setScreen("galaxy")} />;
+        return <Briefing planet={p} pi={selPlanet - 1} boss={b} words={w} profile={profile} isPractice={practiceMode} onStart={startExplore} onBack={() => setScreen("galaxy")} />;
       })()}
 
       {screen === "explore" && profile && selPlanet && (() => {
@@ -1437,8 +1682,8 @@ export default function App() {
         return (
           <>
             <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onExit={() => setScreen("galaxy")} />
-            {encWord && <Encounter word={encWord} planet={pl} profile={profile} onResult={battleResult} />}
-            {showBoss && <BossBattle boss={b} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
+            {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} onResult={battleResult} />}
+            {showBoss && <BossBattle boss={b} pi={selPlanet - 1} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
           </>
         );
       })()}
@@ -1451,7 +1696,7 @@ export default function App() {
             <div style={{ position: "relative", zIndex: 10, textAlign: "center", padding: 20 }}>
               <div style={{ fontSize: 48, marginBottom: 16, animation: "planetFloat 2s infinite" }}>✦</div>
               <h1 style={{ fontSize: 34, fontWeight: 900, color: "#FFE066", letterSpacing: 4, textShadow: "0 0 40px #FFE06644" }}>{practiceMode ? "PRACTICE COMPLETE" : "MISSION COMPLETE"}</h1>
-              <p style={{ fontSize: 16, color: pl.c, marginTop: 8, textShadow: `0 0 15px ${pl.gc}` }}>{pl.name} has been liberated!</p>
+              <p style={{ fontSize: 13, color: "#AABB", marginTop: 10, maxWidth: 380, lineHeight: 1.6, fontStyle: "italic" }}>{PLANET_NARRATIVE[selPlanet - 1]?.victoryLine}</p>
               {!practiceMode && <p style={{ fontSize: 20, color: "#FFE066", fontFamily: "monospace", marginTop: 16 }}>Score: {profile?.totalScore?.toLocaleString()}</p>}
               {!practiceMode && <p style={{ fontSize: 13, color: "#66CCFF", marginTop: 6 }}>+5 Kyber Crystals earned!</p>}
               {practiceMode && <p style={{ fontSize: 13, color: "#44AA44", marginTop: 12 }}>Great practice session!</p>}
