@@ -325,7 +325,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
       {/* Hidden input + keyboard for classic/audio modes */}
       {mode !== "scramble" && <>
         <input ref={inp} type="text" value={typed} onChange={handleInput} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
-        <Keyboard onKey={handleKey} onDel={handleDel} onSubmit={submit} typed={displayChars.join("").trim()} result={result} saber={saber} />
+        <Keyboard onKey={handleKey} onDel={handleDel} onSubmit={submit} typed={displayChars.join("").trim()} result={result} saber={saber} word={word} />
       </>}
     </div>
   );

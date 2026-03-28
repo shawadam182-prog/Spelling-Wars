@@ -329,7 +329,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
           {result === "no" && <div style={{ fontSize: 10, color: "#AA666688", marginTop: 2 }}>{isRetry ? "No Force lost (retry)" : "-1 Force"}</div>}
         </div>}
         <input ref={inp} type="text" value={typed} onChange={handleInput} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
-        <Keyboard onKey={handleKey} onDel={handleDel} onSubmit={submit} typed={displayChars.join("").trim()} result={result} saber={saber} />
+        <Keyboard onKey={handleKey} onDel={handleDel} onSubmit={submit} typed={displayChars.join("").trim()} result={result} saber={saber} word={cw} />
       </div>
     </div>
   );

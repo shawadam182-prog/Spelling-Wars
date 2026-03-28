@@ -100,6 +100,11 @@ export const sfx = (t) => {
       g.gain.setValueAtTime(0.2, c.currentTime);
       g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.6);
       o.start(); o.stop(c.currentTime + 0.6);
+    } else if (t === "key") {
+      o.frequency.setValueAtTime(600 + Math.random() * 100, c.currentTime);
+      g.gain.setValueAtTime(0.02, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.04);
+      o.start(); o.stop(c.currentTime + 0.04);
     }
   } catch {}
 };

@@ -276,7 +276,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
             {wcResult === "ok" && <div style={{ fontSize: 12, color: "#44CC44", fontWeight: 700, marginBottom: 6 }}>✦ Wall destroyed! +50</div>}
             {wcResult === "no" && <div style={{ fontSize: 12, color: "#EE4444", fontWeight: 700, marginBottom: 6 }}>✗ Wrong! The word was: {wallChallenge.word.toUpperCase()}</div>}
             <input ref={wcInpRef} type="text" value={wcTyped} onChange={(e) => { if (!wcResult) setWcTyped(e.target.value.toLowerCase()); }} onKeyDown={(e) => e.key === "Enter" && submitWallChallenge()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
-            {!wcResult && <Keyboard onKey={(k) => { if (!wcResult) { setWcTyped((t) => t + k); wcInpRef.current?.focus(); } }} onDel={() => { if (!wcResult) setWcTyped((t) => t.slice(0, -1)); }} onSubmit={submitWallChallenge} typed={wcTyped.trim()} result={wcResult} saber={saber} />}
+            {!wcResult && <Keyboard onKey={(k) => { if (!wcResult) { setWcTyped((t) => t + k); wcInpRef.current?.focus(); } }} onDel={() => { if (!wcResult) setWcTyped((t) => t.slice(0, -1)); }} onSubmit={submitWallChallenge} typed={wcTyped.trim()} result={wcResult} saber={saber} word={wallChallenge?.word} />}
           </div>
         </div>
       )}
