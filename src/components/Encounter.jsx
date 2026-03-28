@@ -247,7 +247,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
 
       {/* Action buttons */}
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-        <button onClick={() => say(word)} style={{ padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
+        <button onClick={(e) => { say(word); e.currentTarget.style.background = "#4A9EEA44"; setTimeout(() => { if (e.target) e.target.style.background = "#4A9EEA15"; }, 300); }} style={{ padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
         {mode !== "scramble" && hintLabel && (
           <button onClick={useHint} disabled={!canHint} style={{ padding: "5px 14px", fontSize: 11, background: canHint ? "#FFE06615" : "#111", border: `1px solid ${canHint ? "#FFE06644" : "#222"}`, borderRadius: 6, color: canHint ? "#FFE066" : "#444", cursor: canHint ? "pointer" : "default" }}>{hintLabel}</button>
         )}
