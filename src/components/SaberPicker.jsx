@@ -1,5 +1,6 @@
 import { SABERS, SABER_COSTS } from "../data/constants.js";
 import { sfx } from "../utils/audio.js";
+import { saberBonus } from "../utils/helpers.js";
 
 const SaberPicker = ({ profile, onSelect, onClose }) => {
   const owned = profile.unlockedSabers || [0];
@@ -31,7 +32,8 @@ const SaberPicker = ({ profile, onSelect, onClose }) => {
                 }} />
                 <div style={{ flex: 1, textAlign: "left" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: s.c }}>{s.name}</div>
-                  {!isOwned && <div style={{ fontSize: 10, color: "#888" }}>{cost} Kyber Crystals</div>}
+                  <div style={{ fontSize: 10, color: "#8888AA", marginTop: 1 }}>{saberBonus(i).desc}</div>
+                  {!isOwned && <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>{cost} Kyber Crystals</div>}
                 </div>
                 {isCurrent ? (
                   <span style={{ fontSize: 10, color: s.c, letterSpacing: 1, fontWeight: 700, padding: "4px 10px", background: `${s.c}15`, borderRadius: 4 }}>EQUIPPED</span>

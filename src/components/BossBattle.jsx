@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { BOSS_DIALOGUE } from "../data/dialogue.js";
 import { sfx, say } from "../utils/audio.js";
-import { getSaber, sent } from "../utils/helpers.js";
+import { getSaber, sent, saberBonus } from "../utils/helpers.js";
 import { logSpellingAttempt } from "../services/supabase.js";
 import Stars from "./Stars";
 import Nebula from "./Nebula";
@@ -17,7 +17,9 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState(null);
   const [hp, setHp] = useState(boss.hp);
-  const [force, setForce] = useState(5);
+  const bonus = saberBonus(profile.lightsaberColor);
+  const bossMaxForce = 5 + (bonus.extraMaxForce || 0);
+  const [force, setForce] = useState(bossMaxForce);
   const [sk, setSk] = useState(0);
   const [phase, setPhase] = useState("intro");
   const [hintsUsed, setHintsUsed] = useState(0);
@@ -99,15 +101,16 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
 
   const useHint = () => {
     if (result || phase !== "fight") return;
+    const hintCost = bonus.hintDiscount ? 0 : 1; // Purple saber: hints free
     if (hintsUsed === 0) {
-      if (force < 1) return;
-      setForce((f) => f - 1);
+      if (force < hintCost) return;
+      if (hintCost > 0) setForce((f) => f - 1);
       setRevealed(new Set([0]));
       setHintsUsed(1);
       sfx("pip");
     } else if (hintsUsed === 1) {
-      if (force < 1) return;
-      setForce((f) => f - 1);
+      if (force < hintCost) return;
+      if (hintCost > 0) setForce((f) => f - 1);
       const newRev = new Set(revealed);
       for (let i = 0; i < cw.length; i++) {
         if (VOWELS.has(cw[i].toLowerCase())) newRev.add(i);
@@ -181,8 +184,9 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
     ? { animation: "bossDefeatSpin 1.2s ease-in forwards" }
     : { animation: `bossPulse ${2 - rage}s ease-in-out infinite` };
 
-  const hintLabel = hintsUsed === 0 ? "💡 FIRST LETTER (-1⚡)" : hintsUsed === 1 ? "💡 VOWELS (-1⚡)" : null;
-  const canHint = !result && phase === "fight" && hintsUsed < 2 && force >= 1;
+  const hintCostLabel = bonus.hintDiscount ? "FREE" : "-1⚡";
+  const hintLabel = hintsUsed === 0 ? `💡 FIRST LETTER (${hintCostLabel})` : hintsUsed === 1 ? `💡 VOWELS (${hintCostLabel})` : null;
+  const canHint = !result && phase === "fight" && hintsUsed < 2 && (bonus.hintDiscount || force >= 1);
 
   // ── INTRO ──
   if (phase === "intro") return (
@@ -198,7 +202,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
         <h1 style={{ fontSize: 34, fontWeight: 900, color: "#EE4444", letterSpacing: 4, margin: "8px 0", textShadow: "0 0 30px #EE444466, 0 0 60px #EE444422" }}>{boss.name.toUpperCase()}</h1>
         <p style={{ fontSize: 15, color: "#EE666688", fontStyle: "italic", maxWidth: 320, margin: "0 auto" }}>"{boss.q}"</p>
         <div style={{ marginTop: 24, fontSize: 13, color: "#AAA", letterSpacing: 1 }}>Spell <b style={{ color: "#FFE066" }}>{boss.hp}</b> words to defeat them!</div>
-        <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>You have <b style={{ color: saber.c }}>5 Force</b> — each miss drains one!</div>
+        <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>You have <b style={{ color: saber.c }}>{bossMaxForce} Force</b> — each miss drains one!</div>
       </div>
     </div>
   );
@@ -271,7 +275,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
           </div>
           <span style={{ fontSize: 11, color: "#AA6666", fontFamily: "monospace" }}>{hp}/{boss.hp}</span>
         </div>
-        <ForceMeter cur={force} max={5} saberIdx={profile.lightsaberColor} />
+        <ForceMeter cur={force} max={bossMaxForce} saberIdx={profile.lightsaberColor} />
         {dangerLow && <div style={{ fontSize: 10, color: "#EE4444", letterSpacing: 1, marginTop: 4, animation: "planetPulse 1s infinite", textAlign: "center" }}>⚠ FORCE CRITICALLY LOW ⚠</div>}
       </div>
 

@@ -9,6 +9,16 @@ export const getRank = (l) => {
 
 export const getSaber = (i) => SABERS[i] || SABERS[0];
 
+// Saber passive bonuses
+const SABER_BONUSES = [
+  { id: "blue", desc: "Balanced — no bonus" },
+  { id: "green", desc: "Rations restore +1 extra Force", extraRation: 1 },
+  { id: "purple", desc: "Hint costs halved", hintDiscount: true },
+  { id: "yellow", desc: "Combo kicks in 1 step earlier", earlyCombo: true },
+  { id: "white", desc: "+1 max Force, combo builds faster", extraMaxForce: 1, earlyCombo: true },
+];
+export const saberBonus = (i) => SABER_BONUSES[i] || SABER_BONUSES[0];
+
 export const sent = (w) => {
   const s = WS[w.toLowerCase()];
   if (s) return { full: s, masked: s.replace(new RegExp(w, "gi"), "_______") };
@@ -17,11 +27,14 @@ export const sent = (w) => {
 
 // ─── SCORING ────────────────────────────────────────────────────────────────
 
-export const calcScore = (word, combo) => {
+export const calcScore = (word, combo, earlyCombo = false) => {
   const base = 100;
   const lengthBonus = word.length * 10;
   const newCombo = combo + 1;
-  const comboBonus = newCombo >= 5 ? 200 : newCombo >= 3 ? 100 : newCombo >= 2 ? 50 : 0;
+  // Yellow/White saber: combo thresholds shift down by 1
+  const comboBonus = earlyCombo
+    ? (newCombo >= 4 ? 200 : newCombo >= 2 ? 100 : newCombo >= 1 ? 50 : 0)
+    : (newCombo >= 5 ? 200 : newCombo >= 3 ? 100 : newCombo >= 2 ? 50 : 0);
   return { base, lengthBonus, comboBonus, total: base + lengthBonus + comboBonus, newCombo };
 };
 

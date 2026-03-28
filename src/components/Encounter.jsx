@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { PLANET_NARRATIVE } from "../data/narratives.js";
 import { sfx, say } from "../utils/audio.js";
-import { getSaber, sent, calcScore } from "../utils/helpers.js";
+import { getSaber, sent, calcScore, saberBonus } from "../utils/helpers.js";
 import { logSpellingAttempt } from "../services/supabase.js";
 import ForceParticles from "./ForceParticles";
 import WordTiles from "./WordTiles";
@@ -25,6 +25,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
 
   const sn = useMemo(() => sent(word), [word]);
   const saber = getSaber(profile.lightsaberColor);
+  const bonus = saberBonus(profile.lightsaberColor);
   const inp = useRef(null);
   const enIdx = useRef(Math.floor(Math.random() * planet.en.length));
   const enRef = useRef(planet.en[enIdx.current]);
@@ -79,17 +80,16 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
 
   const useHint = () => {
     if (result) return;
+    const hintCost = bonus.hintDiscount ? 0 : 1; // Purple saber: hints free
     if (hintsUsed === 0) {
-      // Hint 1: reveal first letter (costs 1 Force)
-      if (force < 1) return;
-      onForceUse?.(1);
+      if (force < hintCost) return;
+      if (hintCost > 0) onForceUse?.(hintCost);
       setRevealed(new Set([0]));
       setHintsUsed(1);
       sfx("pip");
     } else if (hintsUsed === 1) {
-      // Hint 2: reveal all vowels (costs 1 Force)
-      if (force < 1) return;
-      onForceUse?.(1);
+      if (force < hintCost) return;
+      if (hintCost > 0) onForceUse?.(hintCost);
       const newRev = new Set(revealed);
       for (let i = 0; i < word.length; i++) {
         if (VOWELS.has(word[i].toLowerCase())) newRev.add(i);
@@ -160,8 +160,9 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
     : {};
 
   // Hint button label
-  const hintLabel = hintsUsed === 0 ? "💡 FIRST LETTER (-1⚡)" : hintsUsed === 1 ? "💡 VOWELS (-1⚡)" : null;
-  const canHint = !result && hintsUsed < 2 && force >= 1;
+  const hintCostLabel = bonus.hintDiscount ? "FREE" : "-1⚡";
+  const hintLabel = hintsUsed === 0 ? `💡 FIRST LETTER (${hintCostLabel})` : hintsUsed === 1 ? `💡 VOWELS (${hintCostLabel})` : null;
+  const canHint = !result && hintsUsed < 2 && (bonus.hintDiscount || force >= 1);
 
   return (
     <div style={{
@@ -224,7 +225,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
       </div>
 
       {result === "ok" && (() => {
-        const sc = calcScore(word, combo);
+        const sc = calcScore(word, combo, !!bonus.earlyCombo);
         const pts = hintsUsed > 0 ? Math.floor(sc.total / 2) : sc.total;
         return (
           <div style={{ textAlign: "center", marginBottom: 8, animation: "fadeSlideUp .3s" }}>

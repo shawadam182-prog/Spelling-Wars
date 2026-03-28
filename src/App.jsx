@@ -4,7 +4,7 @@ import { PLANETS, BOSSES, DEFP } from "./data/constants";
 import { LW } from "./data/words";
 import { PLANET_NARRATIVE } from "./data/narratives";
 import { sfx } from "./utils/audio";
-import { getRank, calcScore } from "./utils/helpers";
+import { getRank, calcScore, saberBonus } from "./utils/helpers";
 
 import HyperspaceOverlay from "./components/HyperspaceOverlay";
 import Login from "./components/Login";
@@ -85,9 +85,11 @@ export default function App() {
     setEncWord(null);
     setShowBoss(false);
     setExScore(practiceMode ? 0 : profile.totalScore);
-    // Later levels get more starting Force
+    // Later levels get more starting Force; White saber adds +1
     const lvl = selPlanet || profile.level;
-    setExForce(lvl >= 7 ? 8 : lvl >= 4 ? 6 : 5);
+    const bonus = saberBonus(profile.lightsaberColor);
+    const baseForce = lvl >= 7 ? 8 : lvl >= 4 ? 6 : 5;
+    setExForce(baseForce + (bonus.extraMaxForce || 0));
     setCombo(0);
     goTo("explore");
   };
@@ -99,7 +101,8 @@ export default function App() {
   const battleResult = (won, hinted = false) => {
     if (won) {
       setDefEnemies((p) => [...p, encWord]);
-      const sc = calcScore(encWord, combo);
+      const bonus = saberBonus(profile.lightsaberColor);
+      const sc = calcScore(encWord, combo, !!bonus.earlyCombo);
       const pts = hinted ? Math.floor(sc.total / 2) : sc.total;
       const newCombo = combo + 1;
       setCombo(newCombo);
@@ -139,7 +142,10 @@ export default function App() {
   const collect = (t, a) => {
     if (t === "ration") {
       // Ration packs always restore Force, even in practice
-      setExForce((f) => Math.min(f + 1, 10));
+      // Green saber: rations restore +1 extra
+      const bonus = saberBonus(profile.lightsaberColor);
+      const restore = 1 + (bonus.extraRation || 0);
+      setExForce((f) => Math.min(f + restore, 10));
       return;
     }
     if (practiceMode) return;
@@ -218,7 +224,7 @@ export default function App() {
         const pl = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
         return (
           <>
-            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5} combo={combo} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onForceUse={useForce} onExit={() => setScreen("galaxy")} />
+            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={(selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5) + (saberBonus(profile.lightsaberColor).extraMaxForce || 0)} combo={combo} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onForceUse={useForce} onExit={() => setScreen("galaxy")} />
             {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} combo={combo} force={exForce} onResult={battleResult} onForceUse={useForce} />}
             {showBoss && <BossBattle boss={b} pi={selPlanet - 1} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
           </>

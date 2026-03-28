@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PLANET_NARRATIVE } from "../data/narratives.js";
 import { sfx, say } from "../utils/audio.js";
-import { getSaber, GS, genMap } from "../utils/helpers.js";
+import { getSaber, GS, genMap, saberBonus } from "../utils/helpers.js";
 import Stars from "./Stars";
 import Nebula from "./Nebula";
 import ForceParticles from "./ForceParticles";
@@ -20,6 +20,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
   const [wcTyped, setWcTyped] = useState("");
   const [wcResult, setWcResult] = useState(null);
   const saber = getSaber(profile.lightsaberColor);
+  const bonus = saberBonus(profile.lightsaberColor);
 
   const [ts, setTs] = useState(Math.min(48, (window.innerWidth - 40) / GS));
   useEffect(() => {
@@ -170,7 +171,8 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
         sfx("pip");
         onCollect("ration", 1);
         setEnts((p) => p.filter((e) => e.id !== ent.id));
-        showMsg("🍖 Ration pack! +1 Force restored!", 1800);
+        const restore = 1 + (bonus.extraRation || 0);
+        showMsg(`🍖 Ration pack! +${restore} Force restored!`, 1800);
       } else if (ent.type === "boss") {
         if (bossOk) {
           sfx("boss");
@@ -221,6 +223,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
           <span>Enemies: <b style={{ color: def >= total ? "#44CC44" : "#FFE066" }}>{def}/{total}</b></span>
           <span>Kyber: <b style={{ color: "#66CCFF" }}>{profile.kyberCrystals}</b></span>
           {combo >= 2 && <span style={{ color: "#FFE066", fontWeight: 700, animation: "planetPulse 1s infinite" }}>🔥 {combo}x</span>}
+          {bonus.id !== "blue" && <span style={{ color: saber.c, fontSize: 10 }}>{bonus.desc}</span>}
           {bossOk && <span style={{ color: "#EE6666", animation: "planetPulse 1.5s infinite" }}>✦ BOSS UNLOCKED</span>}
         </div>
         {force <= 2 && <div style={{ fontSize: 10, color: "#EE4444", letterSpacing: 1, marginTop: 4, animation: "planetPulse 1s infinite", textAlign: "center" }}>⚠ FORCE CRITICALLY LOW ⚠</div>}
