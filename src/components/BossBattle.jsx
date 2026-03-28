@@ -12,7 +12,7 @@ import Keyboard from "./Keyboard";
 
 const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 
-const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
+const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: parentForce }) => {
   // Queue-based word system: failed words go back to end of queue
   const allWords = useMemo(() => [...words].sort(() => Math.random() - 0.5).slice(0, boss.hp), [words, boss.hp]);
   const [queue, setQueue] = useState(allWords);
@@ -25,7 +25,8 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const [hp, setHp] = useState(boss.hp);
   const bonus = saberBonus(profile.lightsaberColor);
   const bossMaxForce = 5 + (bonus.extraMaxForce || 0);
-  const [force, setForce] = useState(bossMaxForce);
+  // Use parent Force if provided (carries over from exploration), else start fresh
+  const [force, setForce] = useState(parentForce ?? bossMaxForce);
   const [sk, setSk] = useState(0);
   const [phase, setPhase] = useState("intro");
   const [hintsUsed, setHintsUsed] = useState(0);
@@ -38,6 +39,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const [rings, setRings] = useState([]);
   const [taunt, setTaunt] = useState(null);
   const [showSlash, setShowSlash] = useState(false);
+  const [inputFocused, setInputFocused] = useState(true);
 
   const saber = getSaber(profile.lightsaberColor);
   const inp = useRef(null);
@@ -52,6 +54,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const bgRed = Math.round(rage * 40);
 
   const after = (fn, ms) => { const t = setTimeout(fn, ms); timers.current.push(t); return t; };
+  const refocusInput = () => { setTimeout(() => inp.current?.focus(), 10); };
   useEffect(() => () => { timers.current.forEach(clearTimeout); if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   // Build display chars
@@ -101,9 +104,18 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
 
   useEffect(() => {
     if (phase === "fight" && cw) {
-      timerRef.current = after(() => { say(cw); inp.current?.focus(); }, 400);
+      timerRef.current = after(() => { say(cw); refocusInput(); }, 400);
     }
   }, [wordTick, phase, cw]);
+
+  // Refocus on phase/result changes
+  useEffect(() => { if (phase === "fight" && !result) refocusInput(); }, [phase, result]);
+  // Refocus when window regains focus
+  useEffect(() => {
+    const onFocus = () => { if (phase === "fight") refocusInput(); };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [phase]);
 
   const useHint = () => {
     if (result || phase !== "fight") return;
@@ -164,7 +176,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
         setRetries((r) => new Set([...r, cw]));
         setQueue((q) => [...q.slice(1), q[0]]);
         setWordTick((t) => t + 1);
-        setTyped(""); setResult(null); setHintsUsed(0); setRevealed(new Set()); inp.current?.focus();
+        setTyped(""); setResult(null); setHintsUsed(0); setRevealed(new Set()); refocusInput();
       }, 1800);
     }
   };
@@ -172,7 +184,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const handleKey = (k) => {
     if (result || phase !== "fight") return;
     if (typed.length < maxTypeable) setTyped((t) => t + k);
-    inp.current?.focus();
+    refocusInput();
   };
 
   const handleDel = () => {
@@ -220,7 +232,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
         <h1 style={{ fontSize: 34, fontWeight: 900, color: "#EE4444", letterSpacing: 4, margin: "8px 0", textShadow: "0 0 30px #EE444466, 0 0 60px #EE444422" }}>{boss.name.toUpperCase()}</h1>
         <p style={{ fontSize: 15, color: "#EE666688", fontStyle: "italic", maxWidth: 320, margin: "0 auto" }}>"{boss.q}"</p>
         <div style={{ marginTop: 24, fontSize: 13, color: "#AAA", letterSpacing: 1 }}>Spell <b style={{ color: "#FFE066" }}>{boss.hp}</b> words to defeat them!</div>
-        <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>You have <b style={{ color: saber.c }}>{bossMaxForce} Force</b> — missed words return for retry!</div>
+        <div style={{ marginTop: 8, fontSize: 11, color: "#666" }}>You have <b style={{ color: saber.c }}>{force} Force</b> — missed words return for retry!</div>
       </div>
     </div>
   );
@@ -286,12 +298,15 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
           <div style={{ fontSize: 12, color: "#EE6666", fontWeight: 700, letterSpacing: 1 }}>{boss.icon} {boss.name.toUpperCase()}</div>
           <div style={{ fontSize: 12, color: "#888" }}>Words: {completed.length}/{boss.hp}</div>
         </div>
-        {/* Word progress dots */}
+        {/* Word progress: ✓ done / ✗ failed / ○ remaining */}
         <div style={{ display: "flex", gap: 4, justifyContent: "center", marginBottom: 6, flexWrap: "wrap" }}>
           {allWords.map((w, i) => {
             const done = completed.includes(w);
+            const failed = retries.has(w) && !done;
             const current = w === cw && !done;
-            return <div key={i} title={done ? w : "?"} style={{ width: 10, height: 10, borderRadius: "50%", background: done ? "#44CC44" : current ? "#FFE066" : "#333", border: `1px solid ${done ? "#44CC4466" : current ? "#FFE06666" : "#444"}`, boxShadow: current ? "0 0 6px #FFE06666" : "none", animation: current ? "planetPulse 1s infinite" : "none" }} />;
+            const icon = done ? "✓" : failed ? "✗" : "○";
+            const color = done ? "#44CC44" : failed ? "#EE6666" : current ? "#FFE066" : "#555";
+            return <div key={i} title={done ? w : "?"} style={{ fontSize: 12, fontWeight: 800, color, width: 16, textAlign: "center", animation: current ? "planetPulse 1s infinite" : "none", textShadow: current ? "0 0 6px #FFE06666" : "none" }}>{icon}</div>;
           })}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -314,9 +329,9 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
 
         {/* Action buttons */}
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-          <button onClick={() => say(cw)} style={{ padding: "5px 14px", fontSize: 12, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
+          <button onClick={() => { say(cw); refocusInput(); }} style={{ padding: "5px 14px", fontSize: 12, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
           {hintLabel && (
-            <button onClick={useHint} disabled={!canHint} style={{ padding: "5px 14px", fontSize: 11, background: canHint ? "#FFE06615" : "#111", border: `1px solid ${canHint ? "#FFE06644" : "#222"}`, borderRadius: 6, color: canHint ? "#FFE066" : "#444", cursor: canHint ? "pointer" : "default" }}>{hintLabel}</button>
+            <button onClick={() => { useHint(); refocusInput(); }} disabled={!canHint} style={{ padding: "5px 14px", fontSize: 11, background: canHint ? "#FFE06615" : "#111", border: `1px solid ${canHint ? "#FFE06644" : "#222"}`, borderRadius: 6, color: canHint ? "#FFE066" : "#444", cursor: canHint ? "pointer" : "default" }}>{hintLabel}</button>
           )}
         </div>
         {hintsUsed > 0 && !result && <div style={{ fontSize: 9, color: "#8888AA", marginBottom: 4 }}>Hints: {hintsUsed}/2</div>}
@@ -328,7 +343,29 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: result === "ok" ? "#44CC44" : "#EE4444" }}>{result === "ok" ? "✦ DIRECT HIT!" : "MISS!"}</div>
           {result === "no" && <div style={{ fontSize: 10, color: "#AA666688", marginTop: 2 }}>{isRetry ? "No Force lost (retry)" : "-1 Force"}</div>}
         </div>}
-        <input ref={inp} type="text" value={typed} onChange={handleInput} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
+        <div style={{ width: "100%", maxWidth: 400, padding: "0 16px", marginBottom: 8 }}>
+          <input ref={inp} type="text" value={typed} onChange={handleInput}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+            placeholder="Type your answer..."
+            style={{
+              width: "100%", padding: "10px 16px", fontSize: 20, fontWeight: 700,
+              fontFamily: "monospace", textTransform: "lowercase", letterSpacing: 2,
+              background: "#0a0a1a", color: "#FFE066",
+              border: `2px solid ${inputFocused ? saber.c : saber.c + "44"}`,
+              borderRadius: 8, outline: "none",
+              boxShadow: inputFocused ? `0 0 12px ${saber.g}` : "none",
+              transition: "border-color .2s, box-shadow .2s",
+            }}
+            autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+          />
+          {!inputFocused && !result && phase === "fight" && (
+            <div onClick={refocusInput} style={{ textAlign: "center", marginTop: 4, fontSize: 10, color: "#556", cursor: "pointer", animation: "planetPulse 2s infinite" }}>
+              Click here or press any key to type
+            </div>
+          )}
+        </div>
         <Keyboard onKey={handleKey} onDel={handleDel} onSubmit={submit} typed={displayChars.join("").trim()} result={result} saber={saber} word={cw} />
       </div>
     </div>

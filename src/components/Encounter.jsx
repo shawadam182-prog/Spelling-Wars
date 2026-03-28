@@ -12,7 +12,7 @@ const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 // Shuffle helper (Fisher-Yates)
 const shuffle = (arr) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, onForceUse }) => {
+const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, enemyHp = 1, onResult, onForceUse }) => {
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState(null);
   const [sk, setSk] = useState(0);
@@ -30,6 +30,13 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
   const [shake, setShake] = useState(false);
   const [flash, setFlash] = useState(null);
   const [sparks, setSparks] = useState([]);
+  const [inputFocused, setInputFocused] = useState(true);
+  // Attempt tracking: max 3 per word
+  const [attempt, setAttempt] = useState(1);
+  const [hp, setHp] = useState(enemyHp);
+  // Timer for speed bonus
+  const startTime = useRef(Date.now());
+  const [elapsedTime, setElapsedTime] = useState(null);
 
   const sn = useMemo(() => sent(word), [word]);
   const saber = getSaber(profile.lightsaberColor);
@@ -68,6 +75,9 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
     setEnemyAnim("idle");
     setHintsUsed(0);
     setRevealed(new Set());
+    setAttempt(1);
+    setHp(enemyHp);
+    startTime.current = Date.now();
     // Pick encounter mode: 50% classic, 25% scramble, 25% audio
     const r = Math.random();
     const m = r < 0.5 ? "classic" : r < 0.75 ? "scramble" : "audio";
@@ -78,9 +88,19 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
       setScrambled(shuffle(tiles));
       setSelected([]);
     }
-    const t = setTimeout(() => { say(word); if (m !== "scramble") inp.current?.focus(); }, 300);
+    const t = setTimeout(() => { say(word); if (m !== "scramble") refocusInput(); }, 300);
     return () => clearTimeout(t);
   }, [word]);
+
+  // Aggressive focus management: refocus on every state change
+  const refocusInput = () => { setTimeout(() => inp.current?.focus(), 10); };
+  useEffect(() => { if (mode !== "scramble" && !result) refocusInput(); }, [result, mode]);
+  // Refocus when window regains focus
+  useEffect(() => {
+    const onFocus = () => { if (mode !== "scramble") refocusInput(); };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [mode]);
 
   useEffect(() => () => {
     timers.current.forEach(clearTimeout);
@@ -118,50 +138,99 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
     }
   };
 
+  // ── INPUT HANDLERS ──
+  const handleInput = (e) => {
+    if (result) return;
+    const val = e.target.value.toLowerCase().replace(/[^a-z]/g, "");
+    if (val.length <= maxTypeable) {
+      setTyped(val);
+      sfx("key");
+    }
+  };
+
+  const handleKey = (ch) => {
+    if (result || typed.length >= maxTypeable) return;
+    setTyped((t) => t + ch.toLowerCase());
+    sfx("key");
+    refocusInput();
+  };
+
+  const handleDel = () => {
+    if (result) return;
+    setTyped((t) => t.slice(0, -1));
+    refocusInput();
+  };
+
   const submit = () => {
-    // Build attempt string based on mode
-    const attempt = mode === "scramble"
+    // Build guess string based on mode
+    const guess = mode === "scramble"
       ? selected.map((i) => scrambled[i].char).join("")
       : displayChars.join("");
-    if (!attempt.trim() || result) return;
+    if (!guess.trim() || result) return;
     const hinted = hintsUsed > 0;
     const isAudio = mode === "audio";
-    if (attempt === word.toLowerCase()) {
+    const attemptNum = attempt; // capture current attempt number
+    if (guess === word.toLowerCase()) {
       setResult("ok"); sfxComboOk(combo); setShowSlash(true);
       setPlayerAnim("attack");
       after(() => { setEnemyAnim("recoil"); triggerSparks(12); setFlash("green"); }, 200);
       after(() => setFlash(null), 600);
       after(() => { setPlayerAnim("idle"); setEnemyAnim("idle"); }, 800);
       logSpellingAttempt(profile.username, word, true, { level: profile.level, hinted, mode });
-      timerRef.current = after(() => onResult(true, hinted, isAudio), 1400);
+      const newHp = hp - 1;
+      setHp(newHp);
+      if (newHp > 0) {
+        // Elite enemy: need another word hit
+        timerRef.current = after(() => {
+          setResult(null); setTyped(""); setShowSlash(false);
+          startTime.current = Date.now();
+          say(word); refocusInput();
+        }, 1400);
+      } else {
+        const elapsed = (Date.now() - startTime.current) / 1000;
+        setElapsedTime(elapsed);
+        timerRef.current = after(() => { onResult(true, hinted, isAudio, elapsed); refocusInput(); }, 1400);
+      }
     } else {
-      setResult("no"); sfx("no"); setSk((k) => k + 1);
+      setSk((k) => k + 1);
       setEnemyAnim("lunge");
       after(() => { setShake(true); setFlash("red"); setPlayerAnim("hit"); }, 200);
       after(() => { setShake(false); setFlash(null); }, 700);
       after(() => { setEnemyAnim("idle"); setPlayerAnim("idle"); }, 800);
       logSpellingAttempt(profile.username, word, false, { level: profile.level, hinted, mode });
-      timerRef.current = after(() => onResult(false, hinted, isAudio), 1800);
+
+      if (attemptNum >= 3) {
+        // 3rd failed attempt: reveal word, clear enemy with 0 points
+        setResult("reveal");
+        sfx("no");
+        onForceUse?.(1);
+        timerRef.current = after(() => { onResult(true, true, isAudio, 999, true); refocusInput(); }, 2500);
+      } else {
+        // Still have attempts left
+        setResult("no"); sfx("no");
+        onForceUse?.(1);
+        timerRef.current = after(() => {
+          setResult(null); setTyped(""); setSelected([]);
+          const nextAttempt = attemptNum + 1;
+          setAttempt(nextAttempt);
+          // Progressive hints
+          if (nextAttempt === 2) {
+            // 2nd attempt: reveal first letter free
+            setRevealed(new Set([0]));
+          } else if (nextAttempt === 3) {
+            // 3rd attempt: reveal vowels
+            const newRev = new Set([0]);
+            for (let i = 0; i < word.length; i++) {
+              if (VOWELS.has(word[i].toLowerCase())) newRev.add(i);
+            }
+            setRevealed(newRev);
+          }
+          say(word); refocusInput();
+        }, 1800);
+      }
     }
   };
 
-  const handleKey = (k) => {
-    if (result) return;
-    if (typed.length < maxTypeable) setTyped((t) => t + k);
-    inp.current?.focus();
-  };
-
-  const handleDel = () => {
-    if (result) return;
-    setTyped((t) => t.slice(0, -1));
-  };
-
-  const handleInput = (e) => {
-    if (result) return;
-    const v = e.target.value.toLowerCase();
-    // Only allow up to maxTypeable characters
-    setTyped(v.slice(0, maxTypeable));
-  };
 
   // Spark elements
   const sparkEls = sparks.map((s) => {
@@ -187,7 +256,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
   const canHint = !result && hintsUsed < 2 && (bonus.hintDiscount || force >= 1);
 
   return (
-    <div style={{
+    <div onClick={() => { if (mode !== "scramble") refocusInput(); }} style={{
       position: "fixed", inset: 0,
       background: "radial-gradient(ellipse at 50% 40%, #0a0a2a, #05050FEE)",
       zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -198,6 +267,14 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
 
       {/* Combo indicator */}
       {combo >= 2 && <div style={{ position: "absolute", top: 12, right: 14, zIndex: 115, fontSize: 14, fontWeight: 800, color: "#FFE066", animation: "planetPulse 1s infinite" }}>🔥 {combo}x COMBO</div>}
+
+      {/* Attempt counter */}
+      {attempt > 1 && !result && <div style={{ position: "absolute", top: 12, left: 14, zIndex: 115, fontSize: 11, fontWeight: 700, color: "#EE6666", letterSpacing: 1 }}>ATTEMPT {attempt}/3</div>}
+
+      {/* 30-second timer bar — key resets animation on each attempt */}
+      {!result && <div key={`timer-${attempt}`} style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, zIndex: 115 }}>
+        <div style={{ height: "100%", background: `linear-gradient(90deg, ${saber.c}, #FFE066)`, animation: "timerDrain 30s linear forwards", transformOrigin: "left" }} />
+      </div>}
 
       {/* Screen flash overlay */}
       {flash && <div style={{ position: "absolute", inset: 0, zIndex: 120, pointerEvents: "none", background: flash === "red" ? "#EE0000" : "#00EE00", animation: "flashOverlay .5s forwards" }} />}
@@ -210,25 +287,40 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
       {/* Spark particles */}
       {sparkEls}
 
+      {/* ── ENEMY INFO PANEL ── */}
+      <div style={{ width: "100%", maxWidth: 420, padding: "0 16px", marginBottom: 6 }}>
+        <div style={{ background: "#0a0a1a88", border: "1px solid #EE444433", borderRadius: 8, padding: "6px 12px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ fontSize: 13, color: planet.c, fontWeight: 700, letterSpacing: 1 }}>{enEmoji.current} {enRef.current}</div>
+            <div style={{ fontSize: 11, color: "#AA6666", fontFamily: "monospace" }}>{hp}/{enemyHp} HP</div>
+          </div>
+          <div style={{ height: 6, background: "#1a1a1a", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${(hp / enemyHp) * 100}%`, borderRadius: 3, background: "linear-gradient(90deg, #EE444488, #EE4444)", transition: "width .3s" }} />
+          </div>
+          {narrativeIntro && <div style={{ fontSize: 10, color: "#6666AA", fontStyle: "italic", marginTop: 4, lineHeight: 1.4 }}>{narrativeIntro}</div>}
+        </div>
+      </div>
+
       {/* ── DUEL SCENE ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 10, position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 6, position: "relative" }}>
         <div style={{ textAlign: "center", ...playerStyle }}>
           <div style={{ fontSize: 48, filter: `drop-shadow(0 0 8px ${saber.c})` }}>🥷</div>
         </div>
         <div style={{ width: 40, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${saber.c}, transparent)`, boxShadow: `0 0 10px ${saber.g}`, opacity: result === "ok" ? 1 : 0.3, transition: "opacity .3s" }} />
         <div style={{ fontSize: 12, fontWeight: 900, color: "#EE666666", letterSpacing: 2 }}>VS</div>
         <div style={{ textAlign: "center", ...enemyStyle }}>
-          <div style={{ fontSize: 52, filter: `drop-shadow(0 0 8px ${planet.c})` }}>{enEmoji.current}</div>
+          <div style={{ fontSize: enemyHp > 1 ? 56 : 52, filter: `drop-shadow(0 0 ${enemyHp > 1 ? 12 : 8}px ${planet.c})` }}>{enEmoji.current}</div>
         </div>
       </div>
 
-      {/* Enemy name + narrative */}
-      <div style={{ textAlign: "center", marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "#EE666688", letterSpacing: 2 }}>
-          {mode === "scramble" ? "SCRAMBLE" : mode === "audio" ? "AUDIO CHALLENGE" : "ENCOUNTER"}
+      {/* ── PLAYER INFO ── */}
+      <div style={{ width: "100%", maxWidth: 420, padding: "0 16px", marginBottom: 6 }}>
+        <div style={{ background: "#0a0a1a88", border: `1px solid ${saber.c}33`, borderRadius: 8, padding: "6px 12px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ fontSize: 12, color: saber.c, fontWeight: 700 }}>🥷 {profile.username?.toUpperCase() || "JEDI"}</div>
+            <div style={{ fontSize: 11, color: saber.c, fontFamily: "monospace" }}>{force}⚡</div>
+          </div>
         </div>
-        <div style={{ fontSize: 14, color: planet.c, fontWeight: 700, letterSpacing: 1, marginTop: 2 }}>{enRef.current}</div>
-        {narrativeIntro && <div style={{ fontSize: 11, color: "#8888AA", fontStyle: "italic", marginTop: 4, maxWidth: 340, lineHeight: 1.5 }}>{narrativeIntro}</div>}
       </div>
 
       {/* Sentence — hidden in audio mode, unmasked in scramble */}
@@ -247,9 +339,9 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
 
       {/* Action buttons */}
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-        <button onClick={(e) => { say(word); e.currentTarget.style.background = "#4A9EEA44"; setTimeout(() => { if (e.target) e.target.style.background = "#4A9EEA15"; }, 300); }} style={{ padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
+        <button onClick={(e) => { say(word); e.currentTarget.style.background = "#4A9EEA44"; setTimeout(() => { if (e.target) e.target.style.background = "#4A9EEA15"; }, 300); refocusInput(); }} style={{ padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
         {mode !== "scramble" && hintLabel && (
-          <button onClick={useHint} disabled={!canHint} style={{ padding: "5px 14px", fontSize: 11, background: canHint ? "#FFE06615" : "#111", border: `1px solid ${canHint ? "#FFE06644" : "#222"}`, borderRadius: 6, color: canHint ? "#FFE066" : "#444", cursor: canHint ? "pointer" : "default" }}>{hintLabel}</button>
+          <button onClick={() => { useHint(); refocusInput(); }} disabled={!canHint} style={{ padding: "5px 14px", fontSize: 11, background: canHint ? "#FFE06615" : "#111", border: `1px solid ${canHint ? "#FFE06644" : "#222"}`, borderRadius: 6, color: canHint ? "#FFE066" : "#444", cursor: canHint ? "pointer" : "default" }}>{hintLabel}</button>
         )}
       </div>
       {mode !== "scramble" && hintsUsed > 0 && !result && <div style={{ fontSize: 9, color: "#8888AA", marginBottom: 4 }}>Hints: {hintsUsed}/2 — score halved</div>}
@@ -300,31 +392,67 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
       )}
 
       {result === "ok" && (() => {
-        const sc = calcScore(word, combo, !!bonus.earlyCombo);
+        const sc = calcScore(word, combo, !!bonus.earlyCombo, elapsedTime);
         let pts = hintsUsed > 0 ? Math.floor(sc.total / 2) : sc.total;
         if (mode === "audio") pts = Math.floor(pts * 1.5);
         return (
           <div style={{ textAlign: "center", marginBottom: 8, animation: "fadeSlideUp .3s" }}>
             <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: "#44CC44" }}>✦ CORRECT! +{pts}</div>
             <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
-              {sc.base} base + {sc.lengthBonus} length{sc.comboBonus > 0 ? ` + ${sc.comboBonus} combo` : ""}{hintsUsed > 0 ? " (×0.5 hint)" : ""}{mode === "audio" ? " (×1.5 audio)" : ""}
+              {sc.base} base + {sc.lengthBonus} length{sc.comboBonus > 0 ? ` + ${sc.comboBonus} combo` : ""}{sc.speedBonus > 0 ? ` + ${sc.speedBonus} speed` : ""}{hintsUsed > 0 ? " (×0.5 hint)" : ""}{mode === "audio" ? " (×1.5 audio)" : ""}
             </div>
+            {elapsedTime != null && <div style={{ fontSize: 10, color: sc.speedBonus > 0 ? "#FFE066" : "#666", marginTop: 2 }}>{elapsedTime < 5 ? "⚡ LIGHTNING FAST!" : elapsedTime < 10 ? "⚡ Quick!" : elapsedTime < 15 ? "Good pace" : ""} {elapsedTime.toFixed(1)}s</div>}
             {sc.newCombo >= 2 && <div style={{ fontSize: 14, fontWeight: 800, color: "#FFE066", marginTop: 4, animation: "planetPulse 1s infinite" }}>🔥 {sc.newCombo}x COMBO!</div>}
             {sc.newCombo >= 5 && <div style={{ fontSize: 10, color: "#44CC44", marginTop: 2 }}>+1 Force restored!</div>}
+            {sc.newCombo >= 10 && <div style={{ fontSize: 16, fontWeight: 900, color: "#FFE066", marginTop: 4, animation: "planetPulse .5s infinite", textShadow: "0 0 20px #FFE066" }}>⚡ FORCE SURGE! ⚡</div>}
           </div>
         );
       })()}
+
       {result === "no" && (
         <div style={{ textAlign: "center", marginBottom: 8, animation: "fadeSlideUp .3s" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: "#EE4444" }}>✗ WRONG!</div>
-          <div style={{ fontSize: 11, color: "#AA666688", marginTop: 2 }}>-1 Force</div>
-          {combo > 0 && <div style={{ fontSize: 10, color: "#AA6666", marginTop: 2 }}>Combo lost!</div>}
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: "#EE4444" }}>✗ MISS! -1⚡</div>
+          <div style={{ fontSize: 10, color: "#AA666688", marginTop: 2 }}>Try again... ({attempt}/3 attempts used)</div>
         </div>
       )}
 
-      {/* Hidden input + keyboard for classic/audio modes */}
+      {result === "reveal" && (
+        <div style={{ textAlign: "center", marginBottom: 8, animation: "fadeSlideUp .3s" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: "#EE6644" }}>✗ OUT OF ATTEMPTS</div>
+          <div style={{ fontSize: 10, color: "#AA666688", letterSpacing: 2, marginTop: 6, marginBottom: 4 }}>THE WORD WAS:</div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 3 }}>
+            {word.split("").map((ch, i) => <div key={i} style={{ width: 34, height: 36, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", background: "#1a3a1a", border: "1px solid #44CC4444" }}><span style={{ fontSize: 16, fontWeight: 800, fontFamily: "monospace", textTransform: "uppercase", color: "#44CC44" }}>{ch}</span></div>)}
+          </div>
+          <div style={{ fontSize: 10, color: "#AA666688", marginTop: 4 }}>Enemy cleared • 0 points</div>
+        </div>
+      )}
+      {/* (old duplicate removed) */}
+
+      {/* Visible input + keyboard for classic/audio modes */}
       {mode !== "scramble" && <>
-        <input ref={inp} type="text" value={typed} onChange={handleInput} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
+        <div style={{ width: "100%", maxWidth: 400, padding: "0 16px", marginBottom: 8 }}>
+          <input ref={inp} type="text" value={typed} onChange={handleInput}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+            placeholder="Type your answer..."
+            style={{
+              width: "100%", padding: "10px 16px", fontSize: 20, fontWeight: 700,
+              fontFamily: "monospace", textTransform: "lowercase", letterSpacing: 2,
+              background: "#0a0a1a", color: "#FFE066",
+              border: `2px solid ${inputFocused ? saber.c : saber.c + "44"}`,
+              borderRadius: 8, outline: "none",
+              boxShadow: inputFocused ? `0 0 12px ${saber.g}` : "none",
+              transition: "border-color .2s, box-shadow .2s",
+            }}
+            autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+          />
+          {!inputFocused && !result && (
+            <div onClick={refocusInput} style={{ textAlign: "center", marginTop: 4, fontSize: 10, color: "#556", cursor: "pointer", animation: "planetPulse 2s infinite" }}>
+              Click here or press any key to type
+            </div>
+          )}
+        </div>
         <Keyboard onKey={handleKey} onDel={handleDel} onSubmit={submit} typed={displayChars.join("").trim()} result={result} saber={saber} word={word} />
       </>}
     </div>

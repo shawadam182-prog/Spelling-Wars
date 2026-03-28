@@ -53,7 +53,7 @@ export const sent = (w) => {
 
 // ─── SCORING ────────────────────────────────────────────────────────────────
 
-export const calcScore = (word, combo, earlyCombo = false) => {
+export const calcScore = (word, combo, earlyCombo = false, elapsed = null) => {
   const base = 100;
   const lengthBonus = word.length * 10;
   const newCombo = combo + 1;
@@ -61,14 +61,20 @@ export const calcScore = (word, combo, earlyCombo = false) => {
   const comboBonus = earlyCombo
     ? (newCombo >= 4 ? 200 : newCombo >= 2 ? 100 : newCombo >= 1 ? 50 : 0)
     : (newCombo >= 5 ? 200 : newCombo >= 3 ? 100 : newCombo >= 2 ? 50 : 0);
-  return { base, lengthBonus, comboBonus, total: base + lengthBonus + comboBonus, newCombo };
+  // Speed bonus: fast answers earn extra points
+  const speedBonus = elapsed != null
+    ? (elapsed < 5 ? 100 : elapsed < 10 ? 50 : elapsed < 15 ? 25 : 0)
+    : 0;
+  return { base, lengthBonus, comboBonus, speedBonus, total: base + lengthBonus + comboBonus + speedBonus, newCombo };
 };
 
 // ─── MAP GENERATION ─────────────────────────────────────────────────────────
 
-export const GS = 8;
+export const MAP_W = 12;
+export const MAP_H = 10;
 
 export const canReach = (grid, sx, sy, tx, ty) => {
+  const h = grid.length, w = grid[0].length;
   const v = new Set();
   const q = [[sx, sy]];
   v.add(`${sx},${sy}`);
@@ -77,7 +83,7 @@ export const canReach = (grid, sx, sy, tx, ty) => {
     if (cx === tx && cy === ty) return true;
     for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
       const nx = cx + dx, ny = cy + dy;
-      if (nx >= 0 && ny >= 0 && nx < GS && ny < GS && !v.has(`${nx},${ny}`) && grid[ny][nx] === 0) {
+      if (nx >= 0 && ny >= 0 && nx < w && ny < h && !v.has(`${nx},${ny}`) && grid[ny][nx] !== 1) {
         v.add(`${nx},${ny}`);
         q.push([nx, ny]);
       }
@@ -88,25 +94,26 @@ export const canReach = (grid, sx, sy, tx, ty) => {
 
 export const genMap = (pi, words) => {
   const pl = PLANETS[pi];
-  const ROOM_SIZES = [[2, 2], [3, 2], [2, 3], [3, 3], [4, 3]];
+  const W = MAP_W, H = MAP_H;
+  const ROOM_SIZES = [[3, 2], [3, 3], [4, 2], [4, 3], [5, 3], [5, 4], [3, 4]];
 
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const g = Array.from({ length: GS }, () => Array(GS).fill(1)); // all walls
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const g = Array.from({ length: H }, () => Array(W).fill(1)); // all walls
     const rooms = [];
-    const target = 3 + Math.floor(Math.random() * 2); // 3-4 rooms
+    const target = 4 + Math.floor(Math.random() * 3); // 4-6 rooms
 
     // Try to place rooms with 1-tile padding between them
-    for (let t = 0; t < target * 8 && rooms.length < target; t++) {
-      const [w, h] = ROOM_SIZES[Math.floor(Math.random() * ROOM_SIZES.length)];
-      const x = 1 + Math.floor(Math.random() * (GS - w - 2));
-      const y = 1 + Math.floor(Math.random() * (GS - h - 2));
+    for (let t = 0; t < target * 12 && rooms.length < target; t++) {
+      const [rw, rh] = ROOM_SIZES[Math.floor(Math.random() * ROOM_SIZES.length)];
+      const x = 1 + Math.floor(Math.random() * (W - rw - 2));
+      const y = 1 + Math.floor(Math.random() * (H - rh - 2));
       const overlaps = rooms.some((rm) =>
-        x < rm.x + rm.w + 1 && x + w + 1 > rm.x &&
-        y < rm.y + rm.h + 1 && y + h + 1 > rm.y
+        x < rm.x + rm.w + 1 && x + rw + 1 > rm.x &&
+        y < rm.y + rm.h + 1 && y + rh + 1 > rm.y
       );
-      if (!overlaps) rooms.push({ x, y, w, h, cx: Math.floor(x + w / 2), cy: Math.floor(y + h / 2) });
+      if (!overlaps) rooms.push({ x, y, w: rw, h: rh, cx: Math.floor(x + rw / 2), cy: Math.floor(y + rh / 2) });
     }
-    if (rooms.length < 2) continue;
+    if (rooms.length < 3) continue;
 
     // Carve rooms
     for (const rm of rooms) {
@@ -115,12 +122,8 @@ export const genMap = (pi, words) => {
           g[rm.y + dy][rm.x + dx] = 0;
     }
 
-    // Sort rooms: spawn near bottom-left, boss near top-right
-    rooms.sort((a, b) => {
-      const da = a.cx + (GS - 1 - a.cy);
-      const db = b.cx + (GS - 1 - b.cy);
-      return da - db;
-    });
+    // Sort rooms left-to-right by centre X for spawn→boss flow
+    rooms.sort((a, b) => a.cx - b.cx || a.cy - b.cy);
 
     // Connect adjacent rooms with L-shaped corridors
     for (let i = 0; i < rooms.length - 1; i++) {
@@ -139,11 +142,12 @@ export const genMap = (pi, words) => {
 
     if (!canReach(g, spawn.x, spawn.y, bossPos.x, bossPos.y)) continue;
 
-    // Place 1-2 hazards along corridors (not in rooms)
+    // Place 2-3 hazards along corridors (not in rooms)
     const inRoom = (x, y) => rooms.some((rm) => x >= rm.x && x < rm.x + rm.w && y >= rm.y && y < rm.y + rm.h);
     let hc = 0;
-    for (let t = 0; t < 60 && hc < 2; t++) {
-      const x = Math.floor(Math.random() * GS), y = Math.floor(Math.random() * GS);
+    const hazardTarget = 2 + Math.floor(Math.random() * 2);
+    for (let t = 0; t < 80 && hc < hazardTarget; t++) {
+      const x = Math.floor(Math.random() * W), y = Math.floor(Math.random() * H);
       if (g[y][x] === 0 && !inRoom(x, y) && !(x === spawn.x && y === spawn.y) && !(x === bossPos.x && y === bossPos.y)) {
         g[y][x] = 2; hc++;
       }
@@ -154,23 +158,23 @@ export const genMap = (pi, words) => {
 
     // Interactive terrain: soft walls (3) — wall tiles between two floor areas
     let sw = 0;
-    for (let t = 0; t < 60 && sw < 3; t++) {
-      const x = 1 + Math.floor(Math.random() * (GS - 2));
-      const y = 1 + Math.floor(Math.random() * (GS - 2));
+    for (let t = 0; t < 80 && sw < 3; t++) {
+      const x = 1 + Math.floor(Math.random() * (W - 2));
+      const y = 1 + Math.floor(Math.random() * (H - 2));
       if (g[y][x] !== 1) continue;
       const hPath = g[y][x - 1] === 0 && g[y][x + 1] === 0;
-      const vPath = g[y - 1][x] === 0 && g[y + 1][x] === 0;
+      const vPath = g[y - 1]?.[x] === 0 && g[y + 1]?.[x] === 0;
       if (hPath || vPath) { g[y][x] = 3; sw++; }
     }
 
     // Interactive terrain: jumpable hazards (4) — convert 1 hazard to jumpable
-    for (let y = 0; y < GS; y++)
-      for (let x = 0; x < GS; x++)
-        if (g[y][x] === 2) { g[y][x] = 4; y = GS; break; }
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++)
+        if (g[y][x] === 2) { g[y][x] = 4; y = H; break; }
 
     // Interactive terrain: locked door (5) — place 1 on non-main-path floor
-    for (let t = 0; t < 40; t++) {
-      const x = Math.floor(Math.random() * GS), y = Math.floor(Math.random() * GS);
+    for (let t = 0; t < 60; t++) {
+      const x = Math.floor(Math.random() * W), y = Math.floor(Math.random() * H);
       if (g[y][x] !== 0 || inRoom(x, y)) continue;
       if (x === spawn.x && y === spawn.y) continue;
       if (x === bossPos.x && y === bossPos.y) continue;
@@ -183,55 +187,80 @@ export const genMap = (pi, words) => {
     // Place entities
     const ents = [];
     const occ = new Set([`${spawn.x},${spawn.y}`, `${bossPos.x},${bossPos.y}`]);
-    const placeIn = (type, emoji, word, preferRoom) => {
-      for (let a = 0; a < 50; a++) {
-        const rm = preferRoom || rooms[Math.floor(Math.random() * rooms.length)];
+    const placeIn = (type, emoji, word, preferRoom, extra = {}) => {
+      for (let a = 0; a < 60; a++) {
+        const rm = preferRoom || rooms[1 + Math.floor(Math.random() * (rooms.length - 1))]; // avoid spawn room
         const x = rm.x + Math.floor(Math.random() * rm.w);
         const y = rm.y + Math.floor(Math.random() * rm.h);
         const k = `${x},${y}`;
         if (!occ.has(k) && g[y][x] === 0) {
           occ.add(k);
-          ents.push({ id: `${type}-${ents.length}`, type, x, y, emoji, word });
+          ents.push({ id: `${type}-${ents.length}`, type, x, y, emoji, word, ...extra });
           return true;
         }
       }
       return false;
     };
 
-    // Enemies distributed across rooms
+    // Enemies distributed across rooms (2-3 per room, skip spawn room)
+    const enemyRooms = rooms.slice(1, -1); // intermediate rooms, not spawn or boss room
+    if (enemyRooms.length === 0) enemyRooms.push(rooms[0]); // fallback
     words.forEach((w, i) => {
-      const rm = rooms[(i + 1) % rooms.length]; // skip spawn room for first enemies
+      const rm = enemyRooms[i % enemyRooms.length];
       placeIn("enemy", pl.ee[i % pl.ee.length], w, rm);
     });
+
+    // Elite enemies: 1-2 carrying trouble words or random words with isElite flag
+    const eliteCount = 1 + Math.floor(Math.random() * 2);
+    for (let e = 0; e < eliteCount && e < words.length; e++) {
+      const eWord = words[Math.floor(Math.random() * words.length)];
+      const eRoom = enemyRooms[Math.floor(Math.random() * enemyRooms.length)];
+      placeIn("enemy", pl.ee[e % pl.ee.length], eWord, eRoom, { isElite: true, hp: 2 });
+    }
+
     // Pickups spread across rooms
     placeIn("kyber", "💎", null, rooms[Math.min(1, rooms.length - 1)]);
     placeIn("kyber", "💎", null, rooms[Math.min(2, rooms.length - 1)]);
     placeIn("holocron", "📦", null, rooms[Math.floor(rooms.length / 2)]);
-    placeIn("ration", "🍖", null, rooms[0]);
+
+    // Rations: 2-3 placed near harder rooms (middle/late rooms)
+    const rationCount = 2 + Math.floor(Math.random() * 2);
+    for (let r = 0; r < rationCount; r++) {
+      const rm = rooms[Math.min(r + 1, rooms.length - 2)];
+      placeIn("ration", "🍖", null, rm);
+    }
+
     // Decorations
     pl.fe.forEach((e) => placeIn("decor", e, null));
     // Boss in boss room
     ents.push({ id: "boss", type: "boss", x: bossPos.x, y: bossPos.y, emoji: BOSSES[pi].icon, word: null });
 
-    return { grid: g, entities: ents, spawn };
+    return { grid: g, entities: ents, spawn, rooms };
   }
 
-  // Fallback: simple two-room layout
-  const g = Array.from({ length: GS }, () => Array(GS).fill(1));
-  // Room 1: bottom-left 3x3
-  for (let y = 5; y < 8; y++) for (let x = 0; x < 3; x++) g[y][x] = 0;
-  // Room 2: top-right 3x3
-  for (let y = 0; y < 3; y++) for (let x = 5; x < 8; x++) g[y][x] = 0;
-  // Corridor connecting them
-  for (let x = 2; x < 6; x++) g[4][x] = 0;
-  for (let y = 1; y < 5; y++) g[y][5] = 0;
+  // Fallback: simple three-room layout for 12x10
+  const g = Array.from({ length: H }, () => Array(W).fill(1));
+  // Room 1: left 4x3
+  for (let y = 6; y < 9; y++) for (let x = 1; x < 5; x++) g[y][x] = 0;
+  // Room 2: centre 4x3
+  for (let y = 3; y < 6; y++) for (let x = 4; x < 8; x++) g[y][x] = 0;
+  // Room 3: right 4x3
+  for (let y = 1; y < 4; y++) for (let x = 7; x < 11; x++) g[y][x] = 0;
+  // Corridors
+  for (let y = 4; y < 7; y++) g[y][4] = 0; // vertical: room1 to room2
+  for (let x = 7; x < 8; x++) g[3][x] = 0; // horizontal: room2 to room3
+  for (let y = 2; y < 4; y++) g[y][7] = 0; // vertical connector
 
-  const spawn = { x: 1, y: 6 };
-  const bossPos = { x: 6, y: 1 };
+  const spawn = { x: 2, y: 7 };
+  const bossPos = { x: 9, y: 2 };
   const ents = [];
   const occ = new Set([`${spawn.x},${spawn.y}`, `${bossPos.x},${bossPos.y}`]);
   words.forEach((w, i) => {
-    const x = 5 + (i % 3), y = (i < 3) ? 0 + i : 5 + (i - 3);
+    // Distribute enemies across the three rooms
+    let x, y;
+    if (i < 4) { x = 1 + (i % 4); y = 6 + Math.floor(i / 4); }
+    else if (i < 7) { x = 4 + ((i - 4) % 4); y = 3 + Math.floor((i - 4) / 4); }
+    else { x = 7 + ((i - 7) % 4); y = 1 + Math.floor((i - 7) / 4); }
     if (g[y]?.[x] === 0 && !occ.has(`${x},${y}`)) {
       occ.add(`${x},${y}`);
       ents.push({ id: `enemy-${i}`, type: "enemy", x, y, emoji: pl.ee[i % pl.ee.length], word: w });

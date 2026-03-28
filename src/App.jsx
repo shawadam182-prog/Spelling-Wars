@@ -44,6 +44,7 @@ export default function App() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [noDamageTaken, setNoDamageTaken] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
+  const [encEntity, setEncEntity] = useState(null);
 
   const save = useCallback(async (p) => { await saveProgress(p); }, []);
 
@@ -121,63 +122,64 @@ export default function App() {
     goTo("explore");
   };
 
-  const battleWord = (w) => setEncWord(w);
+  const battleWord = (w, id, entity) => { setEncWord(w); setEncEntity(entity || null); };
 
-  const useForce = (cost) => setExForce((f) => Math.max(f - cost, 0));
+  const useForce = (cost) => setExForce((f) => {
+    const nf = Math.max(f - cost, 0);
+    if (nf <= 0) setTimeout(() => setScreen("failed"), 800);
+    return nf;
+  });
 
-  const battleResult = (won, hinted = false, audioMode = false) => {
+  const battleResult = (won, hinted = false, audioMode = false, elapsed = null, zeroPoints = false) => {
     if (won) {
       setDefEnemies((p) => [...p, encWord]);
       const bonus = saberBonus(profile.lightsaberColor);
-      const sc = calcScore(encWord, combo, !!bonus.earlyCombo);
-      let pts = hinted ? Math.floor(sc.total / 2) : sc.total;
-      if (audioMode) pts = Math.floor(pts * 1.5);
-      const newCombo = combo + 1;
+      const sc = calcScore(encWord, combo, !!bonus.earlyCombo, elapsed);
+      let pts = zeroPoints ? 0 : (hinted ? Math.floor(sc.total / 2) : sc.total);
+      if (audioMode && !zeroPoints) pts = Math.floor(pts * 1.5);
+      const newCombo = zeroPoints ? 0 : combo + 1;
       setCombo(newCombo);
+      if (zeroPoints) setNoDamageTaken(false);
       if (!practiceMode) {
         setExScore((s) => s + pts);
         upd({
           totalScore: (profile?.totalScore || 0) + pts,
           wordProgress: {
             ...(profile?.wordProgress || {}),
-            [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + 1,
+            [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + (zeroPoints ? 0 : 1),
           },
+          ...(zeroPoints ? { wordFails: { ...(profile?.wordFails || {}), [encWord]: ((profile?.wordFails || {})[encWord] || 0) + 1 } } : {}),
         });
       } else {
         upd({
           wordProgress: {
             ...(profile?.wordProgress || {}),
-            [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + 1,
+            [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + (zeroPoints ? 0 : 1),
           },
         });
       }
       // Combo 5+ restores +1 Force
       if (newCombo >= 5) setExForce((f) => Math.min(f + 1, 10));
       // Check combo achievements
-      const comboEarned = checkComboAchievement(newCombo, profile.unlockedAchievements || []);
-      if (comboEarned.length) awardAchievements(comboEarned, profile);
-      // Check profile-based achievements after a short delay (profile updates async)
-      setTimeout(() => { if (profile) runAchievementCheck({ ...profile, totalScore: (profile.totalScore || 0) + pts, wordProgress: { ...(profile.wordProgress || {}), [encWord]: ((profile.wordProgress || {})[encWord] || 0) + 1 } }); }, 100);
+      if (!zeroPoints) {
+        const comboEarned = checkComboAchievement(newCombo, profile.unlockedAchievements || []);
+        if (comboEarned.length) awardAchievements(comboEarned, profile);
+        // Check profile-based achievements after a short delay (profile updates async)
+        setTimeout(() => { if (profile) runAchievementCheck({ ...profile, totalScore: (profile.totalScore || 0) + pts, wordProgress: { ...(profile.wordProgress || {}), [encWord]: ((profile.wordProgress || {})[encWord] || 0) + 1 } }); }, 100);
+      }
     } else {
+      // This branch is now only hit if we add a forced fail path in the future
       setCombo(0);
       setNoDamageTaken(false);
-      // Track failure
       upd({
         wordFails: {
           ...(profile?.wordFails || {}),
           [encWord]: ((profile?.wordFails || {})[encWord] || 0) + 1,
         },
       });
-      // Wrong answer drains Force
-      setExForce((f) => {
-        const nf = f - 1;
-        if (nf <= 0) {
-          setTimeout(() => setScreen("failed"), 800);
-        }
-        return nf;
-      });
     }
     setEncWord(null);
+    setEncEntity(null);
   };
 
   const collect = (t, a) => {
@@ -336,8 +338,8 @@ export default function App() {
         return (
           <>
             <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={(selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5) + (saberBonus(profile.lightsaberColor).extraMaxForce || 0)} combo={combo} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onForceUse={useForce} onExit={() => setScreen("galaxy")} />
-            {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} combo={combo} force={exForce} onResult={battleResult} onForceUse={useForce} />}
-            {showBoss && <BossBattle boss={b} pi={selPlanet - 1} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
+            {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} combo={combo} force={exForce} enemyHp={encEntity?.isElite ? (encEntity.hp || 2) : 1} onResult={battleResult} onForceUse={useForce} />}
+            {showBoss && <BossBattle boss={b} pi={selPlanet - 1} words={w} planet={pl} profile={profile} force={exForce} onWin={bossWin} onLose={bossLose} />}
           </>
         );
       })()}

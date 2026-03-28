@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PLANET_NARRATIVE } from "../data/narratives.js";
 import { sfx, say, startAmbient, stopAmbient, startHeartbeat, stopHeartbeat } from "../utils/audio.js";
-import { getSaber, GS, genMap, saberBonus } from "../utils/helpers.js";
+import { getSaber, MAP_W, MAP_H, genMap, saberBonus } from "../utils/helpers.js";
 import Stars from "./Stars";
 import Nebula from "./Nebula";
 import ForceParticles from "./ForceParticles";
@@ -10,7 +10,7 @@ import ForceMeter from "./ForceMeter";
 import Keyboard from "./Keyboard";
 
 const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, combo = 0, defeated, onBattle, onBoss, onCollect, onForceUse, onExit }) => {
-  const [pos, setPos] = useState({ x: 0, y: GS - 1 });
+  const [pos, setPos] = useState({ x: 0, y: MAP_H - 1 });
   const [dir, setDir] = useState({ x: 1, y: 0 });
   const [map, setMap] = useState(null);
   const [ents, setEnts] = useState([]);
@@ -22,9 +22,9 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
   const saber = getSaber(profile.lightsaberColor);
   const bonus = saberBonus(profile.lightsaberColor);
 
-  const [ts, setTs] = useState(Math.min(48, (window.innerWidth - 40) / GS));
+  const [ts, setTs] = useState(Math.min(44, (window.innerWidth - 40) / MAP_W));
   useEffect(() => {
-    const onResize = () => setTs(Math.min(48, (window.innerWidth - 40) / GS));
+    const onResize = () => setTs(Math.min(44, (window.innerWidth - 40) / MAP_W));
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -52,7 +52,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
     const d = genMap(pi, words);
     setMap(d);
     setEnts(d.entities);
-    const sp = d.spawn || { x: 0, y: GS - 1 };
+    const sp = d.spawn || { x: 0, y: MAP_H - 1 };
     setPos(sp);
     posRef.current = sp;
   }, [pi, words]);
@@ -84,6 +84,8 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
     setTimeout(() => wcInpRef.current?.focus(), 100);
   }, [words]);
 
+  const refocusWcInput = () => { setTimeout(() => wcInpRef.current?.focus(), 10); };
+
   const submitWallChallenge = useCallback(() => {
     if (!wallChallenge || wcResult) return;
     if (wcTyped.trim().toLowerCase() === wallChallenge.word.toLowerCase()) {
@@ -110,7 +112,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
     setDir({ x: dx, y: dy });
     const cur = posRef.current;
     const nx = cur.x + dx, ny = cur.y + dy;
-    if (nx < 0 || ny < 0 || nx >= GS || ny >= GS) return;
+    if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return;
     const cell = map.grid[ny][nx];
 
     // Hard wall
@@ -166,7 +168,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
     const ent = entsRef.current.find((e) => e.x === nx && e.y === ny);
     if (ent) {
       if (ent.type === "enemy") {
-        onBattle(ent.word, ent.id);
+        onBattle(ent.word, ent.id, ent);
       } else if (ent.type === "kyber") {
         sfx("pip");
         onCollect("kyber", 2);
@@ -242,7 +244,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 10, padding: 16 }}>
         {msg && <div style={{ position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)", background: "#12122AEE", border: "1px solid #FFE06633", borderRadius: 8, padding: "10px 18px", fontSize: 13, color: "#CCCCDD", zIndex: 30, maxWidth: 320, textAlign: "center", animation: "fadeSlideUp .3s", boxShadow: "0 4px 20px rgba(0,0,0,.5)" }}>{msg}</div>}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${GS},${ts}px)`, gridTemplateRows: `repeat(${GS},${ts}px)`, gap: 1, background: "#00000066", borderRadius: 8, overflow: "hidden", border: `1px solid ${planet.c}33`, boxShadow: `0 0 30px ${planet.gc}` }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${MAP_W},${ts}px)`, gridTemplateRows: `repeat(${MAP_H},${ts}px)`, gap: 1, background: "#00000066", borderRadius: 8, overflow: "hidden", border: `1px solid ${planet.c}33`, boxShadow: `0 0 30px ${planet.gc}` }}>
           {map.grid.map((row, y) => row.map((cell, x) => {
             const isP = pos.x === x && pos.y === y;
             const ent = ents.find((e) => e.x === x && e.y === y);
@@ -252,6 +254,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
             if (cell === 2 || cell === 4) bg = planet.hc;
             if (cell === 3) bg = planet.wc;
             if (cell === 5) bg = planet.wc;
+            if (cell === 6) bg = "#1a2a1a"; // ration crate bg
             return (
               <div key={`${x}-${y}`} onClick={() => { const dx = x - pos.x, dy = y - pos.y; if (Math.abs(dx) + Math.abs(dy) === 1) move(dx, dy); }} style={{ width: ts, height: ts, background: bg, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer", fontSize: ts * 0.5 }}>
                 {cell === 1 && <span style={{ fontSize: ts * 0.45, opacity: 0.6 }}>{planet.we}</span>}
@@ -259,7 +262,8 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
                 {cell === 3 && <span style={{ fontSize: ts * 0.45, opacity: 0.8, filter: `drop-shadow(0 0 4px ${saber.c})`, animation: "planetPulse 2s infinite" }}>{planet.we}</span>}
                 {cell === 4 && <span style={{ fontSize: ts * 0.4, opacity: 0.7, filter: "drop-shadow(0 0 3px #4A9EEA)" }}>{planet.he}</span>}
                 {cell === 5 && <span style={{ fontSize: ts * 0.45 }}>🚪</span>}
-                {ent && !isP && ent.type !== "decor" && <span style={{ fontSize: ts * 0.5, position: "absolute", zIndex: 5, animation: ent.type === "boss" ? (bossOk ? "entityBob 1s infinite" : "none") : "entityBob 1.5s infinite", opacity: ent.type === "boss" && !bossOk ? 0.4 : 1, filter: ent.type === "boss" && bossOk ? `drop-shadow(0 0 6px ${planet.c})` : ent.type === "ration" ? "drop-shadow(0 0 4px #FFE066)" : "none" }}>{ent.emoji}</span>}
+                {cell === 6 && <span style={{ fontSize: ts * 0.45, filter: "drop-shadow(0 0 4px #44CC44)" }}>📦</span>}
+                {ent && !isP && ent.type !== "decor" && <span style={{ fontSize: ts * (ent.isElite ? 0.6 : 0.5), position: "absolute", zIndex: 5, animation: ent.type === "boss" ? (bossOk ? "entityBob 1s infinite" : "none") : "entityBob 1.5s infinite", opacity: ent.type === "boss" && !bossOk ? 0.4 : 1, filter: ent.isElite ? `drop-shadow(0 0 6px #FFE066) drop-shadow(0 0 10px #FFE06666)` : ent.type === "boss" && bossOk ? `drop-shadow(0 0 6px ${planet.c})` : ent.type === "ration" ? "drop-shadow(0 0 4px #FFE066)" : "none" }}>{ent.emoji}</span>}
                 {ent && ent.type === "decor" && !isP && <span style={{ fontSize: ts * 0.35, opacity: 0.4 }}>{ent.emoji}</span>}
                 {isP && <div style={{ position: "absolute", zIndex: 10, fontSize: ts * 0.55, filter: `drop-shadow(0 0 6px ${saber.c})`, transform: dir.x < 0 ? "scaleX(-1)" : "none" }}>🥷</div>}
               </div>
@@ -281,14 +285,28 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
           <div style={{ background: "#12122A", border: `1px solid ${saber.c}44`, borderRadius: 12, padding: "20px 24px", maxWidth: 360, textAlign: "center", animation: "fadeSlideUp .3s" }}>
             <div style={{ fontSize: 11, color: saber.c, letterSpacing: 2, marginBottom: 6 }}>⚔ CUT THE WALL</div>
             <div style={{ fontSize: 13, color: "#CCCCDD", marginBottom: 12 }}>Spell the word to slice through!</div>
-            <button onClick={() => say(wallChallenge.word)} style={{ marginBottom: 10, padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
+            <button onClick={() => { say(wallChallenge.word); refocusWcInput(); }} style={{ marginBottom: 10, padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 4, color: wcResult === "ok" ? "#44CC44" : wcResult === "no" ? "#EE4444" : "#FFE066", fontFamily: "monospace", minHeight: 32, marginBottom: 8 }}>
               {wcTyped || <span style={{ color: "#333", fontSize: 11 }}>TYPE THE WORD...</span>}
             </div>
             {wcResult === "ok" && <div style={{ fontSize: 12, color: "#44CC44", fontWeight: 700, marginBottom: 6 }}>✦ Wall destroyed! +50</div>}
             {wcResult === "no" && <div style={{ fontSize: 12, color: "#EE4444", fontWeight: 700, marginBottom: 6 }}>✗ Wrong! The word was: {wallChallenge.word.toUpperCase()}</div>}
-            <input ref={wcInpRef} type="text" value={wcTyped} onChange={(e) => { if (!wcResult) setWcTyped(e.target.value.toLowerCase()); }} onKeyDown={(e) => e.key === "Enter" && submitWallChallenge()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
-            {!wcResult && <Keyboard onKey={(k) => { if (!wcResult) { setWcTyped((t) => t + k); wcInpRef.current?.focus(); } }} onDel={() => { if (!wcResult) setWcTyped((t) => t.slice(0, -1)); }} onSubmit={submitWallChallenge} typed={wcTyped.trim()} result={wcResult} saber={saber} word={wallChallenge?.word} />}
+            <input ref={wcInpRef} type="text" value={wcTyped}
+              onChange={(e) => { if (!wcResult) setWcTyped(e.target.value.toLowerCase()); }}
+              onKeyDown={(e) => e.key === "Enter" && submitWallChallenge()}
+              placeholder="Type the word..."
+              style={{
+                width: "100%", maxWidth: 300, padding: "10px 16px", fontSize: 20, fontWeight: 700,
+                fontFamily: "monospace", textTransform: "lowercase", letterSpacing: 2,
+                background: "#0a0a1a", color: "#FFE066",
+                border: `2px solid ${saber.c}88`,
+                borderRadius: 8, outline: "none",
+                boxShadow: `0 0 8px ${saber.g}`,
+                marginBottom: 8,
+              }}
+              autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+            />
+            {!wcResult && <Keyboard onKey={(k) => { if (!wcResult) { setWcTyped((t) => t + k); refocusWcInput(); } }} onDel={() => { if (!wcResult) setWcTyped((t) => t.slice(0, -1)); }} onSubmit={submitWallChallenge} typed={wcTyped.trim()} result={wcResult} saber={saber} word={wallChallenge?.word} />}
           </div>
         </div>
       )}
