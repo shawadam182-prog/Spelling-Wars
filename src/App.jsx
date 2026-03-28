@@ -98,12 +98,13 @@ export default function App() {
 
   const useForce = (cost) => setExForce((f) => Math.max(f - cost, 0));
 
-  const battleResult = (won, hinted = false) => {
+  const battleResult = (won, hinted = false, audioMode = false) => {
     if (won) {
       setDefEnemies((p) => [...p, encWord]);
       const bonus = saberBonus(profile.lightsaberColor);
       const sc = calcScore(encWord, combo, !!bonus.earlyCombo);
-      const pts = hinted ? Math.floor(sc.total / 2) : sc.total;
+      let pts = hinted ? Math.floor(sc.total / 2) : sc.total;
+      if (audioMode) pts = Math.floor(pts * 1.5);
       const newCombo = combo + 1;
       setCombo(newCombo);
       if (!practiceMode) {
