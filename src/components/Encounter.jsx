@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { PLANET_NARRATIVE } from "../data/narratives.js";
-import { sfx, say } from "../utils/audio.js";
+import { sfx, say, sfxComboOk } from "../utils/audio.js";
 import { getSaber, sent, calcScore, saberBonus } from "../utils/helpers.js";
 import { logSpellingAttempt } from "../services/supabase.js";
 import ForceParticles from "./ForceParticles";
@@ -127,7 +127,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, onResult, 
     const hinted = hintsUsed > 0;
     const isAudio = mode === "audio";
     if (attempt === word.toLowerCase()) {
-      setResult("ok"); sfx("ok"); setShowSlash(true);
+      setResult("ok"); sfxComboOk(combo); setShowSlash(true);
       setPlayerAnim("attack");
       after(() => { setEnemyAnim("recoil"); triggerSparks(12); setFlash("green"); }, 200);
       after(() => setFlash(null), 600);

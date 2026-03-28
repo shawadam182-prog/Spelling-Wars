@@ -109,6 +109,103 @@ export const sfx = (t) => {
   } catch {}
 };
 
+// ─── AMBIENT DRONE ─────────────────────────────────────────────────────────
+// Very quiet continuous tone per planet, creates atmosphere
+
+const AMBIENT_CONFIGS = [
+  { freq: 110, type: "sine", gain: 0.025 },     // Tatooine — warm desert hum
+  { freq: 280, type: "sine", gain: 0.015 },     // Hoth — icy wind
+  { freq: 130, type: "sine", gain: 0.025 },     // Dagobah — swamp ambiance
+  { freq: 60, type: "sawtooth", gain: 0.015 },  // Mustafar — volcanic rumble
+  { freq: 150, type: "sine", gain: 0.02 },      // Endor — forest hum
+  { freq: 90, type: "triangle", gain: 0.02 },   // Kashyyyk — deep forest
+  { freq: 200, type: "sine", gain: 0.02 },      // Naboo — gentle breeze
+  { freq: 120, type: "square", gain: 0.015 },   // Death Star — mechanical
+  { freq: 70, type: "sawtooth", gain: 0.02 },   // Coruscant — city rumble
+  { freq: 100, type: "triangle", gain: 0.02 },  // Jakku — desert wind
+];
+
+let _ambientOsc = null;
+let _ambientGain = null;
+
+export const startAmbient = (planetIndex) => {
+  stopAmbient();
+  if (_muted) return;
+  try {
+    const c = getAudioCtx();
+    if (!c) return;
+    const cfg = AMBIENT_CONFIGS[planetIndex] || AMBIENT_CONFIGS[0];
+    _ambientOsc = c.createOscillator();
+    _ambientGain = c.createGain();
+    _ambientOsc.type = cfg.type;
+    _ambientOsc.frequency.setValueAtTime(cfg.freq, c.currentTime);
+    _ambientGain.gain.setValueAtTime(cfg.gain, c.currentTime);
+    _ambientOsc.connect(_ambientGain);
+    _ambientGain.connect(c.destination);
+    _ambientOsc.start();
+  } catch {}
+};
+
+export const stopAmbient = () => {
+  try {
+    if (_ambientOsc) { _ambientOsc.stop(); _ambientOsc.disconnect(); }
+    if (_ambientGain) _ambientGain.disconnect();
+  } catch {}
+  _ambientOsc = null;
+  _ambientGain = null;
+};
+
+// ─── LOW FORCE HEARTBEAT ───────────────────────────────────────────────────
+// Rhythmic pulse when Force is critically low
+
+let _heartbeatTimer = null;
+
+export const startHeartbeat = () => {
+  if (_heartbeatTimer) return;
+  const pulse = () => {
+    if (_muted) return;
+    try {
+      const c = getAudioCtx();
+      if (!c) return;
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type = "sine";
+      o.frequency.setValueAtTime(55, c.currentTime);
+      g.gain.setValueAtTime(0.06, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.25);
+      o.start(); o.stop(c.currentTime + 0.25);
+    } catch {}
+  };
+  pulse();
+  _heartbeatTimer = setInterval(pulse, 1200);
+};
+
+export const stopHeartbeat = () => {
+  if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+};
+
+// ─── COMBO-AWARE CORRECT SOUND ─────────────────────────────────────────────
+
+export const sfxComboOk = (combo = 0) => {
+  if (_muted) return;
+  try {
+    const c = getAudioCtx();
+    if (!c) return;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    // Base pitch rises with combo
+    const pitch = Math.min(combo, 6) * 40;
+    o.frequency.setValueAtTime(523 + pitch, c.currentTime);
+    o.frequency.setValueAtTime(659 + pitch, c.currentTime + 0.1);
+    o.frequency.setValueAtTime(784 + pitch, c.currentTime + 0.2);
+    g.gain.setValueAtTime(0.12 + Math.min(combo, 5) * 0.01, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.4);
+    o.start(); o.stop(c.currentTime + 0.4);
+  } catch {}
+};
+
 export const say = (w) => {
   if (_muted) return;
   if (typeof speechSynthesis === "undefined") return;

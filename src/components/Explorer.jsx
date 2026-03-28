@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PLANET_NARRATIVE } from "../data/narratives.js";
-import { sfx, say } from "../utils/audio.js";
+import { sfx, say, startAmbient, stopAmbient, startHeartbeat, stopHeartbeat } from "../utils/audio.js";
 import { getSaber, GS, genMap, saberBonus } from "../utils/helpers.js";
 import Stars from "./Stars";
 import Nebula from "./Nebula";
@@ -35,6 +35,18 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
   const wcInpRef = useRef(null);
   posRef.current = pos;
   entsRef.current = ents;
+
+  // Start ambient drone when explorer mounts, stop on unmount
+  useEffect(() => {
+    startAmbient(pi);
+    return () => { stopAmbient(); stopHeartbeat(); };
+  }, [pi]);
+
+  // Heartbeat when Force is critically low
+  useEffect(() => {
+    if (force <= 2) startHeartbeat();
+    else stopHeartbeat();
+  }, [force]);
 
   useEffect(() => {
     const d = genMap(pi, words);
