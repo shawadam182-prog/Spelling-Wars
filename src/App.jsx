@@ -20,6 +20,7 @@ import GrandMasterCelebration from "./components/GrandMasterCelebration";
 import AchievementToast from "./components/AchievementToast";
 import AchievementPanel from "./components/AchievementPanel";
 import DailyChallenge from "./components/DailyChallenge";
+import HomeworkScanner from "./components/HomeworkScanner";
 
 // ─── MAIN APP ───────────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ export default function App() {
   const [toastQueue, setToastQueue] = useState([]);
   const [showAchievements, setShowAchievements] = useState(false);
   const [noDamageTaken, setNoDamageTaken] = useState(true);
+  const [showScanner, setShowScanner] = useState(false);
 
   const save = useCallback(async (p) => { await saveProgress(p); }, []);
 
@@ -284,6 +286,19 @@ export default function App() {
     setScreen("galaxy");
   };
 
+  // Homework scanner: launch special mission with scanned words
+  const onScannerWords = (words) => {
+    setShowScanner(false);
+    // Pick a random planet for visuals
+    const completed = profile.planetsCompleted || [];
+    const pool = completed.length > 0 ? completed : [profile.level];
+    const pi = pool[Math.floor(Math.random() * pool.length)];
+    setSelPlanet(pi);
+    setPracticeMode(true);
+    setTroubleWordList(words);
+    goTo("briefing");
+  };
+
   // Trouble words: launch practice session with trouble words
   const startTroubleWords = () => {
     const allWords = LW.flat();
@@ -306,7 +321,7 @@ export default function App() {
 
       {screen === "galaxy" && profile && (
         <>
-          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} onTroubleWords={getTroubleWords(profile, LW.flat()).length > 0 ? startTroubleWords : null} onAchievements={() => setShowAchievements(true)} onDaily={startDaily} />
+          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} onTroubleWords={getTroubleWords(profile, LW.flat()).length > 0 ? startTroubleWords : null} onAchievements={() => setShowAchievements(true)} onDaily={startDaily} onScanner={() => setShowScanner(true)} />
           {showSaberPicker && <SaberPicker profile={profile} onSelect={(i, c) => { handleSaberSelect(i, c); }} onClose={() => setShowSaberPicker(false)} />}
         </>
       )}
@@ -379,6 +394,10 @@ export default function App() {
 
       {showAchievements && profile && (
         <AchievementPanel profile={profile} onClose={() => setShowAchievements(false)} />
+      )}
+
+      {showScanner && (
+        <HomeworkScanner onWords={onScannerWords} onClose={() => setShowScanner(false)} />
       )}
     </>
   );
