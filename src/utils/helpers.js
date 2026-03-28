@@ -15,6 +15,16 @@ export const sent = (w) => {
   return { full: `The word is ${w}.`, masked: "The word is _______." };
 };
 
+// ─── SCORING ────────────────────────────────────────────────────────────────
+
+export const calcScore = (word, combo) => {
+  const base = 100;
+  const lengthBonus = word.length * 10;
+  const newCombo = combo + 1;
+  const comboBonus = newCombo >= 5 ? 200 : newCombo >= 3 ? 100 : newCombo >= 2 ? 50 : 0;
+  return { base, lengthBonus, comboBonus, total: base + lengthBonus + comboBonus, newCombo };
+};
+
 // ─── MAP GENERATION ─────────────────────────────────────────────────────────
 
 export const GS = 8;

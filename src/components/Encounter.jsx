@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { PLANET_NARRATIVE } from "../data/narratives.js";
 import { sfx, say } from "../utils/audio.js";
-import { getSaber, sent } from "../utils/helpers.js";
+import { getSaber, sent, calcScore } from "../utils/helpers.js";
 import { logSpellingAttempt } from "../services/supabase.js";
 import ForceParticles from "./ForceParticles";
 import WordTiles from "./WordTiles";
 import Keyboard from "./Keyboard";
 
-const Encounter = ({ word, planet, pi, profile, onResult }) => {
+const Encounter = ({ word, planet, pi, profile, combo = 0, onResult }) => {
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState(null);
   const [sk, setSk] = useState(0);
@@ -106,7 +106,10 @@ const Encounter = ({ word, planet, pi, profile, onResult }) => {
       animation: shake ? "screenShake .4s ease-out" : "encounterAppear .4s ease-out",
       overflow: "hidden",
     }}>
-      <ForceParticles count={6} color={saber.c + "44"} />
+      <ForceParticles count={combo >= 3 ? 16 : 6} color={saber.c + (combo >= 3 ? "88" : "44")} />
+
+      {/* Combo indicator */}
+      {combo >= 2 && <div style={{ position: "absolute", top: 12, right: 14, zIndex: 115, fontSize: 14, fontWeight: 800, color: "#FFE066", animation: "planetPulse 1s infinite" }}>🔥 {combo}x COMBO</div>}
 
       {/* Screen flash overlay */}
       {flash && <div style={{ position: "absolute", inset: 0, zIndex: 120, pointerEvents: "none", background: flash === "red" ? "#EE0000" : "#00EE00", animation: "flashOverlay .5s forwards" }} />}
@@ -152,8 +155,26 @@ const Encounter = ({ word, planet, pi, profile, onResult }) => {
         <WordTiles typed={typed} word={word} result={result} saber={saber} />
       </div>
 
-      {result && <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 8, color: result === "ok" ? "#44CC44" : "#EE4444", animation: "fadeSlideUp .3s" }}>{result === "ok" ? "✦ CORRECT! +100" : "✗ WRONG!"}</div>}
-      {result === "no" && <div style={{ fontSize: 11, color: "#AA666688", marginBottom: 6 }}>-1 Force</div>}
+      {result === "ok" && (() => {
+        const sc = calcScore(word, combo);
+        return (
+          <div style={{ textAlign: "center", marginBottom: 8, animation: "fadeSlideUp .3s" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: "#44CC44" }}>✦ CORRECT! +{sc.total}</div>
+            <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
+              {sc.base} base + {sc.lengthBonus} length{sc.comboBonus > 0 ? ` + ${sc.comboBonus} combo` : ""}
+            </div>
+            {sc.newCombo >= 2 && <div style={{ fontSize: 14, fontWeight: 800, color: "#FFE066", marginTop: 4, animation: "planetPulse 1s infinite" }}>🔥 {sc.newCombo}x COMBO!</div>}
+            {sc.newCombo >= 5 && <div style={{ fontSize: 10, color: "#44CC44", marginTop: 2 }}>+1 Force restored!</div>}
+          </div>
+        );
+      })()}
+      {result === "no" && (
+        <div style={{ textAlign: "center", marginBottom: 8, animation: "fadeSlideUp .3s" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: "#EE4444" }}>✗ WRONG!</div>
+          <div style={{ fontSize: 11, color: "#AA666688", marginTop: 2 }}>-1 Force</div>
+          {combo > 0 && <div style={{ fontSize: 10, color: "#AA6666", marginTop: 2 }}>Combo lost!</div>}
+        </div>
+      )}
 
       <input ref={inp} type="text" value={typed} onChange={(e) => { if (!result) setTyped(e.target.value.toLowerCase()); }} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
       <Keyboard onKey={(k) => { if (!result) { setTyped((t) => t + k); inp.current?.focus(); } }} onDel={() => { if (!result) setTyped((t) => t.slice(0, -1)); }} onSubmit={submit} typed={typed.trim()} result={result} saber={saber} />

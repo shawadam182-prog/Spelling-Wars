@@ -4,7 +4,7 @@ import { PLANETS, BOSSES, DEFP } from "./data/constants";
 import { LW } from "./data/words";
 import { PLANET_NARRATIVE } from "./data/narratives";
 import { sfx } from "./utils/audio";
-import { getRank } from "./utils/helpers";
+import { getRank, calcScore } from "./utils/helpers";
 
 import HyperspaceOverlay from "./components/HyperspaceOverlay";
 import Login from "./components/Login";
@@ -33,6 +33,7 @@ export default function App() {
   const [pendingScreen, setPendingScreen] = useState(null);
   const [showSaberPicker, setShowSaberPicker] = useState(false);
   const [exForce, setExForce] = useState(5);
+  const [combo, setCombo] = useState(0);
 
   const save = useCallback(async (p) => { await saveProgress(p); }, []);
 
@@ -87,6 +88,7 @@ export default function App() {
     // Later levels get more starting Force
     const lvl = selPlanet || profile.level;
     setExForce(lvl >= 7 ? 8 : lvl >= 4 ? 6 : 5);
+    setCombo(0);
     goTo("explore");
   };
 
@@ -95,10 +97,13 @@ export default function App() {
   const battleResult = (won) => {
     if (won) {
       setDefEnemies((p) => [...p, encWord]);
+      const sc = calcScore(encWord, combo);
+      const newCombo = combo + 1;
+      setCombo(newCombo);
       if (!practiceMode) {
-        setExScore((s) => s + 100);
+        setExScore((s) => s + sc.total);
         upd({
-          totalScore: (profile?.totalScore || 0) + 100,
+          totalScore: (profile?.totalScore || 0) + sc.total,
           wordProgress: {
             ...(profile?.wordProgress || {}),
             [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + 1,
@@ -112,12 +117,14 @@ export default function App() {
           },
         });
       }
+      // Combo 5+ restores +1 Force
+      if (newCombo >= 5) setExForce((f) => Math.min(f + 1, 10));
     } else {
+      setCombo(0);
       // Wrong answer drains Force
       setExForce((f) => {
         const nf = f - 1;
         if (nf <= 0) {
-          // Mission failed — delay slightly so player sees the result
           setTimeout(() => setScreen("failed"), 800);
         }
         return nf;
@@ -208,8 +215,8 @@ export default function App() {
         const pl = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
         return (
           <>
-            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onExit={() => setScreen("galaxy")} />
-            {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} onResult={battleResult} />}
+            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5} combo={combo} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onExit={() => setScreen("galaxy")} />
+            {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} combo={combo} onResult={battleResult} />}
             {showBoss && <BossBattle boss={b} pi={selPlanet - 1} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
           </>
         );

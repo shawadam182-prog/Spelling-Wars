@@ -8,7 +8,7 @@ import ForceParticles from "./ForceParticles";
 import MuteBtn from "./MuteBtn";
 import ForceMeter from "./ForceMeter";
 
-const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, defeated, onBattle, onBoss, onCollect, onExit }) => {
+const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, combo = 0, defeated, onBattle, onBoss, onCollect, onExit }) => {
   const [pos, setPos] = useState({ x: 0, y: GS - 1 });
   const [dir, setDir] = useState({ x: 1, y: 0 });
   const [map, setMap] = useState(null);
@@ -138,6 +138,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, de
         <div style={{ display: "flex", gap: 16, alignItems: "center", fontSize: 11, color: "#888" }}>
           <span>Enemies: <b style={{ color: def >= total ? "#44CC44" : "#FFE066" }}>{def}/{total}</b></span>
           <span>Kyber: <b style={{ color: "#66CCFF" }}>{profile.kyberCrystals}</b></span>
+          {combo >= 2 && <span style={{ color: "#FFE066", fontWeight: 700, animation: "planetPulse 1s infinite" }}>🔥 {combo}x</span>}
           {bossOk && <span style={{ color: "#EE6666", animation: "planetPulse 1.5s infinite" }}>✦ BOSS UNLOCKED</span>}
         </div>
         {force <= 2 && <div style={{ fontSize: 10, color: "#EE4444", letterSpacing: 1, marginTop: 4, animation: "planetPulse 1s infinite", textAlign: "center" }}>⚠ FORCE CRITICALLY LOW ⚠</div>}
