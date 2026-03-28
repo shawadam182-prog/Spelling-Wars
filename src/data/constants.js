@@ -67,5 +67,6 @@ export const DEFP = {
   kyberCrystals: 0,
   unlockedSabers: [0],
   wordProgress: {},
+  wordFails: {},
   planetsCompleted: [],
 };

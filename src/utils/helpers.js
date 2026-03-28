@@ -9,6 +9,32 @@ export const getRank = (l) => {
 
 export const getSaber = (i) => SABERS[i] || SABERS[0];
 
+// Trouble words: words where fails > correct or never attempted
+export const getTroubleWords = (profile, words) => {
+  const wp = profile?.wordProgress || {};
+  const wf = profile?.wordFails || {};
+  return words.filter((w) => {
+    const correct = wp[w] || 0;
+    const fails = wf[w] || 0;
+    return correct === 0 || fails > correct;
+  });
+};
+
+// Mastery score: 0-1 per word (correct / (correct + fails + 1))
+export const wordMastery = (profile, word) => {
+  const correct = (profile?.wordProgress || {})[word] || 0;
+  const fails = (profile?.wordFails || {})[word] || 0;
+  if (correct === 0 && fails === 0) return 0;
+  return correct / (correct + fails);
+};
+
+// Planet mastery: average mastery across all words for that planet
+export const planetMastery = (profile, words) => {
+  if (!words || words.length === 0) return 0;
+  const total = words.reduce((s, w) => s + wordMastery(profile, w), 0);
+  return total / words.length;
+};
+
 // Saber passive bonuses
 const SABER_BONUSES = [
   { id: "blue", desc: "Balanced — no bonus" },

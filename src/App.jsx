@@ -4,7 +4,7 @@ import { PLANETS, BOSSES, DEFP } from "./data/constants";
 import { LW } from "./data/words";
 import { PLANET_NARRATIVE } from "./data/narratives";
 import { sfx } from "./utils/audio";
-import { getRank, calcScore, saberBonus } from "./utils/helpers";
+import { getRank, calcScore, saberBonus, getTroubleWords } from "./utils/helpers";
 
 import HyperspaceOverlay from "./components/HyperspaceOverlay";
 import Login from "./components/Login";
@@ -34,6 +34,7 @@ export default function App() {
   const [showSaberPicker, setShowSaberPicker] = useState(false);
   const [exForce, setExForce] = useState(5);
   const [combo, setCombo] = useState(0);
+  const [troubleWordList, setTroubleWordList] = useState(null);
 
   const save = useCallback(async (p) => { await saveProgress(p); }, []);
 
@@ -77,6 +78,7 @@ export default function App() {
     const clamped = Math.min(Math.max(id, 1), PLANETS.length);
     setSelPlanet(clamped);
     setPracticeMode(!!isPractice);
+    setTroubleWordList(null); // clear any trouble word override
     goTo("briefing");
   };
 
@@ -128,6 +130,13 @@ export default function App() {
       if (newCombo >= 5) setExForce((f) => Math.min(f + 1, 10));
     } else {
       setCombo(0);
+      // Track failure
+      upd({
+        wordFails: {
+          ...(profile?.wordFails || {}),
+          [encWord]: ((profile?.wordFails || {})[encWord] || 0) + 1,
+        },
+      });
       // Wrong answer drains Force
       setExForce((f) => {
         const nf = f - 1;
@@ -203,6 +212,20 @@ export default function App() {
     }
   };
 
+  // Trouble words: launch practice session with trouble words
+  const startTroubleWords = () => {
+    const allWords = LW.flat();
+    const trouble = getTroubleWords(profile, allWords);
+    if (trouble.length === 0) return;
+    // Pick a random planet from completed ones (or current)
+    const pi = profile.level;
+    setSelPlanet(pi);
+    setPracticeMode(true);
+    // Store trouble words to use instead of level words
+    setTroubleWordList(trouble.slice(0, 10));
+    goTo("briefing");
+  };
+
   return (
     <>
       <HyperspaceOverlay active={hyperspace} onDone={onHyperspaceDone} />
@@ -211,18 +234,18 @@ export default function App() {
 
       {screen === "galaxy" && profile && (
         <>
-          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} />
+          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} onTroubleWords={getTroubleWords(profile, LW.flat()).length > 0 ? startTroubleWords : null} />
           {showSaberPicker && <SaberPicker profile={profile} onSelect={(i, c) => { handleSaberSelect(i, c); }} onClose={() => setShowSaberPicker(false)} />}
         </>
       )}
 
       {screen === "briefing" && profile && selPlanet && (() => {
-        const p = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
+        const p = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = troubleWordList || LW[selPlanet - 1] || LW[0];
         return <Briefing planet={p} pi={selPlanet - 1} boss={b} words={w} profile={profile} isPractice={practiceMode} onStart={startExplore} onBack={() => setScreen("galaxy")} />;
       })()}
 
       {screen === "explore" && profile && selPlanet && (() => {
-        const pl = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = LW[selPlanet - 1] || LW[0];
+        const pl = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = troubleWordList || LW[selPlanet - 1] || LW[0];
         return (
           <>
             <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={(selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5) + (saberBonus(profile.lightsaberColor).extraMaxForce || 0)} combo={combo} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onForceUse={useForce} onExit={() => setScreen("galaxy")} />

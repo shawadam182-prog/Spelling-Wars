@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { PLANETS, BOSSES, LORE, SABERS } from "../data/constants.js";
 import { LW } from "../data/words.js";
-import { getRank, getSaber } from "../utils/helpers.js";
+import { getRank, getSaber, planetMastery, getTroubleWords } from "../utils/helpers.js";
 import Stars from "./Stars";
 import Nebula from "./Nebula";
 import ForceParticles from "./ForceParticles";
 import MuteBtn from "./MuteBtn";
 
-const Galaxy = ({ profile, onSelect, onLogout, onSaberPick }) => {
+const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords }) => {
   const [hov, setHov] = useState(null);
   const [lore, setLore] = useState(null);
   const loreTimer = useRef(null);
@@ -67,7 +67,17 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick }) => {
                   <div style={{ fontSize: 12, fontWeight: 700, color: pl.c, letterSpacing: 1 }}>{pl.name}</div>
                   <div style={{ fontSize: 10, color: "#8888AA", fontStyle: "italic", margin: "3px 0" }}>"{pl.desc}"</div>
                   <div style={{ fontSize: 9, color: "#666688" }}>{LW[i]?.length} words — Boss: {bossData.icon} {bossData.name}</div>
-                  <div style={{ marginTop: 6, fontSize: 10, fontWeight: 600, color: done && !cur ? "#44AA44" : cur ? "#FFE066" : "#44AA44", padding: "2px 8px", borderRadius: 4, background: done && !cur ? "#44AA4415" : cur ? "#FFE06615" : "#44AA4415" }}>{done && !cur ? "✦ PRACTICE MODE" : done ? "✦ COMPLETED" : "▸ TAP TO LAUNCH"}</div>
+                  {(() => {
+                    const m = planetMastery(profile, LW[i]);
+                    const pct = Math.round(m * 100);
+                    return <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
+                      <div style={{ width: 60, height: 5, background: "#1a1a2e", borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: pct >= 80 ? "#44CC44" : pct >= 40 ? "#FFE066" : "#EE6666", borderRadius: 3, transition: "width .3s" }} />
+                      </div>
+                      <span style={{ fontSize: 9, color: "#8888AA" }}>{pct}%</span>
+                    </div>;
+                  })()}
+                  <div style={{ marginTop: 4, fontSize: 10, fontWeight: 600, color: done && !cur ? "#44AA44" : cur ? "#FFE066" : "#44AA44", padding: "2px 8px", borderRadius: 4, background: done && !cur ? "#44AA4415" : cur ? "#FFE06615" : "#44AA4415" }}>{done && !cur ? "✦ PRACTICE MODE" : done ? "✦ COMPLETED" : "▸ TAP TO LAUNCH"}</div>
                 </div>
               )}
             </div>
@@ -81,6 +91,7 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick }) => {
           loreTimer.current = setTimeout(() => setLore(null), 5000);
         }} style={{ background: "#12122A", border: "1px solid #2a2a4a", borderRadius: 8, color: "#8888CC", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>✦ ARCHIVES</button>
         <button onClick={onSaberPick} style={{ background: "#12122A", border: `1px solid ${saber.c}44`, borderRadius: 8, color: saber.c, fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>⚔ LIGHTSABER</button>
+        {onTroubleWords && <button onClick={onTroubleWords} style={{ background: "#12122A", border: "1px solid #EE444444", borderRadius: 8, color: "#EE6666", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>⚔ TROUBLE WORDS</button>}
         <button onClick={() => onSelect(profile.level)} style={{ background: `linear-gradient(135deg,${saber.c}33,${saber.c}11)`, border: `1px solid ${saber.c}66`, borderRadius: 8, color: "#FFE066", fontSize: 13, fontWeight: 700, padding: "8px 24px", cursor: "pointer", letterSpacing: 2 }}>▸ LAUNCH MISSION</button>
       </div>
       {lore && (
