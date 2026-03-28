@@ -69,4 +69,5 @@ export const DEFP = {
   wordProgress: {},
   wordFails: {},
   planetsCompleted: [],
+  unlockedAchievements: [],
 };

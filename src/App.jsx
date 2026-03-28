@@ -3,6 +3,7 @@ import { saveProgress, loadProgress } from "./services/supabase";
 import { PLANETS, BOSSES, DEFP } from "./data/constants";
 import { LW } from "./data/words";
 import { PLANET_NARRATIVE } from "./data/narratives";
+import { checkAchievements, checkComboAchievement } from "./data/achievements";
 import { sfx } from "./utils/audio";
 import { getRank, calcScore, saberBonus, getTroubleWords } from "./utils/helpers";
 
@@ -16,6 +17,8 @@ import Encounter from "./components/Encounter";
 import BossBattle from "./components/BossBattle";
 import Stars from "./components/Stars";
 import GrandMasterCelebration from "./components/GrandMasterCelebration";
+import AchievementToast from "./components/AchievementToast";
+import AchievementPanel from "./components/AchievementPanel";
 
 // ─── MAIN APP ───────────────────────────────────────────────────────────────
 
@@ -35,6 +38,9 @@ export default function App() {
   const [exForce, setExForce] = useState(5);
   const [combo, setCombo] = useState(0);
   const [troubleWordList, setTroubleWordList] = useState(null);
+  const [toastQueue, setToastQueue] = useState([]);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [noDamageTaken, setNoDamageTaken] = useState(true);
 
   const save = useCallback(async (p) => { await saveProgress(p); }, []);
 
@@ -46,6 +52,21 @@ export default function App() {
       return n;
     });
   }, [save]);
+
+  // Award achievements and queue toasts
+  const awardAchievements = useCallback((ids, currentProfile) => {
+    if (!ids.length) return;
+    sfx("ok");
+    setToastQueue((q) => [...q, ...ids]);
+    const updated = [...(currentProfile.unlockedAchievements || []), ...ids];
+    upd({ unlockedAchievements: updated });
+  }, [upd]);
+
+  // Run profile-based achievement checks
+  const runAchievementCheck = useCallback((p) => {
+    const earned = checkAchievements(p);
+    if (earned.length) awardAchievements(earned, p);
+  }, [awardAchievements]);
 
   // Hyperspace transition helper
   const goTo = useCallback((scr) => {
@@ -93,6 +114,7 @@ export default function App() {
     const baseForce = lvl >= 7 ? 8 : lvl >= 4 ? 6 : 5;
     setExForce(baseForce + (bonus.extraMaxForce || 0));
     setCombo(0);
+    setNoDamageTaken(true);
     goTo("explore");
   };
 
@@ -128,8 +150,14 @@ export default function App() {
       }
       // Combo 5+ restores +1 Force
       if (newCombo >= 5) setExForce((f) => Math.min(f + 1, 10));
+      // Check combo achievements
+      const comboEarned = checkComboAchievement(newCombo, profile.unlockedAchievements || []);
+      if (comboEarned.length) awardAchievements(comboEarned, profile);
+      // Check profile-based achievements after a short delay (profile updates async)
+      setTimeout(() => { if (profile) runAchievementCheck({ ...profile, totalScore: (profile.totalScore || 0) + pts, wordProgress: { ...(profile.wordProgress || {}), [encWord]: ((profile.wordProgress || {})[encWord] || 0) + 1 } }); }, 100);
     } else {
       setCombo(0);
+      setNoDamageTaken(false);
       // Track failure
       upd({
         wordFails: {
@@ -159,8 +187,11 @@ export default function App() {
       return;
     }
     if (practiceMode) return;
-    if (t === "kyber") upd({ kyberCrystals: (profile?.kyberCrystals || 0) + a });
-    else if (t === "score") {
+    if (t === "kyber") {
+      const newCrystals = (profile?.kyberCrystals || 0) + a;
+      upd({ kyberCrystals: newCrystals });
+      if (newCrystals >= 25) runAchievementCheck({ ...profile, kyberCrystals: newCrystals });
+    } else if (t === "score") {
       setExScore((s) => s + a);
       upd({ totalScore: (profile?.totalScore || 0) + a });
     }
@@ -186,6 +217,18 @@ export default function App() {
       totalScore: (profile.totalScore || 0) + 500,
     });
     setShowBoss(false);
+    // Check achievements after boss win
+    const maxF = (selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5) + (saberBonus(profile.lightsaberColor).extraMaxForce || 0);
+    const postProfile = { ...profile, level: nl, planetsCompleted: comp, kyberCrystals: (profile.kyberCrystals || 0) + 5, totalScore: (profile.totalScore || 0) + 500, unlockedAchievements: profile.unlockedAchievements || [] };
+    const earned = checkAchievements(postProfile);
+    // Force-based achievements
+    if (exForce >= maxF && !(postProfile.unlockedAchievements || []).includes("force_full")) earned.push("force_full");
+    if (noDamageTaken && !(postProfile.unlockedAchievements || []).includes("no_damage")) earned.push("no_damage");
+    if (earned.length) {
+      sfx("ok");
+      setToastQueue((q) => [...q, ...earned]);
+      upd({ unlockedAchievements: [...(postProfile.unlockedAchievements || []), ...earned] });
+    }
     // Check for Grand Master (all 10 planets)
     if (comp.length >= 10) {
       setScreen("grandmaster");
@@ -204,11 +247,17 @@ export default function App() {
     } else if (cost && profile.kyberCrystals >= cost) {
       // Unlock and equip
       sfx("saber");
+      const newOwned = [...owned, idx];
       upd({
         lightsaberColor: idx,
-        unlockedSabers: [...owned, idx],
+        unlockedSabers: newOwned,
         kyberCrystals: profile.kyberCrystals - cost,
       });
+      // Check for Rainbow Blade
+      if (newOwned.length >= 5) {
+        const rbEarned = checkAchievements({ ...profile, unlockedSabers: newOwned, unlockedAchievements: profile.unlockedAchievements || [] });
+        if (rbEarned.length) awardAchievements(rbEarned, profile);
+      }
     }
   };
 
@@ -234,7 +283,7 @@ export default function App() {
 
       {screen === "galaxy" && profile && (
         <>
-          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} onTroubleWords={getTroubleWords(profile, LW.flat()).length > 0 ? startTroubleWords : null} />
+          <Galaxy profile={profile} onSelect={selPl} onLogout={() => { setProfile(null); setScreen("login"); }} onSaberPick={() => setShowSaberPicker(true)} onTroubleWords={getTroubleWords(profile, LW.flat()).length > 0 ? startTroubleWords : null} onAchievements={() => setShowAchievements(true)} />
           {showSaberPicker && <SaberPicker profile={profile} onSelect={(i, c) => { handleSaberSelect(i, c); }} onClose={() => setShowSaberPicker(false)} />}
         </>
       )}
@@ -291,6 +340,18 @@ export default function App() {
 
       {screen === "grandmaster" && profile && (
         <GrandMasterCelebration profile={profile} onContinue={() => setScreen("galaxy")} />
+      )}
+
+      {toastQueue.length > 0 && (
+        <AchievementToast
+          key={toastQueue[0]}
+          achievementId={toastQueue[0]}
+          onDone={() => setToastQueue((q) => q.slice(1))}
+        />
+      )}
+
+      {showAchievements && profile && (
+        <AchievementPanel profile={profile} onClose={() => setShowAchievements(false)} />
       )}
     </>
   );

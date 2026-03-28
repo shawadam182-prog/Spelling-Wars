@@ -7,7 +7,7 @@ import Nebula from "./Nebula";
 import ForceParticles from "./ForceParticles";
 import MuteBtn from "./MuteBtn";
 
-const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords }) => {
+const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAchievements }) => {
   const [hov, setHov] = useState(null);
   const [lore, setLore] = useState(null);
   const loreTimer = useRef(null);
@@ -90,6 +90,7 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords }) =>
           setLore(LORE[Math.floor(Math.random() * LORE.length)]);
           loreTimer.current = setTimeout(() => setLore(null), 5000);
         }} style={{ background: "#12122A", border: "1px solid #2a2a4a", borderRadius: 8, color: "#8888CC", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>✦ ARCHIVES</button>
+        <button onClick={onAchievements} style={{ background: "#12122A", border: "1px solid #FFD70044", borderRadius: 8, color: "#FFD700", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>🏆 ACHIEVEMENTS</button>
         <button onClick={onSaberPick} style={{ background: "#12122A", border: `1px solid ${saber.c}44`, borderRadius: 8, color: saber.c, fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>⚔ LIGHTSABER</button>
         {onTroubleWords && <button onClick={onTroubleWords} style={{ background: "#12122A", border: "1px solid #EE444444", borderRadius: 8, color: "#EE6666", fontSize: 11, padding: "8px 14px", cursor: "pointer" }}>⚔ TROUBLE WORDS</button>}
         <button onClick={() => onSelect(profile.level)} style={{ background: `linear-gradient(135deg,${saber.c}33,${saber.c}11)`, border: `1px solid ${saber.c}66`, borderRadius: 8, color: "#FFE066", fontSize: 13, fontWeight: 700, padding: "8px 24px", cursor: "pointer", letterSpacing: 2 }}>▸ LAUNCH MISSION</button>
