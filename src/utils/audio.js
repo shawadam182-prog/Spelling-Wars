@@ -206,21 +206,30 @@ export const sfxComboOk = (combo = 0) => {
   } catch {}
 };
 
+// Pre-load voices (Chrome loads them async)
+let _voices = [];
+if (typeof speechSynthesis !== "undefined") {
+  _voices = speechSynthesis.getVoices();
+  speechSynthesis.addEventListener?.("voiceschanged", () => {
+    _voices = speechSynthesis.getVoices();
+  });
+}
+
 export const say = (w) => {
-  if (_muted) return;
   if (typeof speechSynthesis === "undefined") return;
+  // Don't check _muted — speech is educational, let it always work
   try {
     speechSynthesis.cancel();
-    // Small delay after cancel to avoid Chrome killing the new utterance
-    setTimeout(() => {
-      const u = new SpeechSynthesisUtterance(w);
-      u.lang = "en-GB";
-      u.rate = 0.85;
-      // Pick a voice if available (prefer UK English for Arthur)
-      const voices = speechSynthesis.getVoices();
-      const gbVoice = voices.find((v) => v.lang === "en-GB") || voices.find((v) => v.lang.startsWith("en"));
-      if (gbVoice) u.voice = gbVoice;
-      speechSynthesis.speak(u);
-    }, 50);
-  } catch {}
+    const u = new SpeechSynthesisUtterance(w);
+    u.lang = "en-GB";
+    u.rate = 0.85;
+    u.volume = 1;
+    // Pick a voice (prefer UK English for Arthur)
+    if (_voices.length === 0) _voices = speechSynthesis.getVoices();
+    const gbVoice = _voices.find((v) => v.lang === "en-GB") || _voices.find((v) => v.lang.startsWith("en"));
+    if (gbVoice) u.voice = gbVoice;
+    speechSynthesis.speak(u);
+  } catch (e) {
+    console.warn("Speech failed:", e);
+  }
 };
