@@ -2,16 +2,15 @@ import { useMemo } from "react";
 
 /**
  * Wordle-style letter tiles for spelling feedback.
- * Before submit: neutral saber-colored tiles.
- * Correct: all tiles flash green.
- * Wrong: green (right letter + position), amber (right letter, wrong position), red (not in word).
+ * Supports revealed/locked tiles for the hint system.
  */
-const WordTiles = ({ typed, word, result, saber }) => {
+const WordTiles = ({ typed, word, result, saber, revealed }) => {
   const letters = typed ? typed.split("") : [];
   const target = word.toLowerCase();
   const maxLen = Math.max(word.length, letters.length);
+  const rev = revealed || new Set();
 
-  // Responsive sizing — scale down for long words
+  // Responsive sizing
   const tileSize = maxLen > 10 ? 26 : maxLen > 7 ? 30 : 36;
   const fontSize = maxLen > 10 ? 13 : maxLen > 7 ? 15 : 18;
   const gap = maxLen > 10 ? 2 : 3;
@@ -22,18 +21,13 @@ const WordTiles = ({ typed, word, result, saber }) => {
     const guess = typed.trim().toLowerCase();
     const colors = new Array(guess.length).fill("miss");
     const remaining = {};
-
-    // Count target letter frequencies
     for (const ch of target) remaining[ch] = (remaining[ch] || 0) + 1;
-
-    // Pass 1: exact matches
     for (let i = 0; i < guess.length; i++) {
       if (i < target.length && guess[i] === target[i]) {
         colors[i] = "exact";
         remaining[guess[i]]--;
       }
     }
-    // Pass 2: present but wrong position
     for (let i = 0; i < guess.length; i++) {
       if (colors[i] === "exact") continue;
       if (remaining[guess[i]] > 0) {
@@ -44,8 +38,8 @@ const WordTiles = ({ typed, word, result, saber }) => {
     return colors;
   }, [typed, target, result]);
 
-  const bg = (i) => {
-    if (!result) return "#1a1a2e";
+  const bgFn = (i) => {
+    if (!result) return rev.has(i) ? "#1a1a3a" : "#1a1a2e";
     if (result === "ok") return "#2a6a2a";
     if (!tileColors?.[i]) return "#1a1a2e";
     if (tileColors[i] === "exact") return "#2a6a2a";
@@ -53,8 +47,8 @@ const WordTiles = ({ typed, word, result, saber }) => {
     return "#4a1a1a";
   };
 
-  const border = (i) => {
-    if (!result) return `1px solid ${saber.c}44`;
+  const borderFn = (i) => {
+    if (!result) return rev.has(i) ? "1px solid #6666AA66" : `1px solid ${saber.c}44`;
     if (result === "ok") return "1px solid #44CC4466";
     if (!tileColors?.[i]) return "1px solid #33335544";
     if (tileColors[i] === "exact") return "1px solid #44CC4466";
@@ -62,8 +56,8 @@ const WordTiles = ({ typed, word, result, saber }) => {
     return "1px solid #EE444466";
   };
 
-  const color = (i) => {
-    if (!result) return "#FFE066";
+  const colorFn = (i) => {
+    if (!result) return rev.has(i) ? "#8888CC" : "#FFE066";
     if (result === "ok") return "#44CC44";
     if (!tileColors?.[i]) return "#666";
     if (tileColors[i] === "exact") return "#44CC44";
@@ -75,29 +69,31 @@ const WordTiles = ({ typed, word, result, saber }) => {
     <div key={i} style={{
       width: tileSize, height: tileSize, borderRadius: 4,
       display: "flex", alignItems: "center", justifyContent: "center",
-      background: overrides.bg || bg(i),
-      border: overrides.border || border(i),
+      background: overrides.bg || bgFn(i),
+      border: overrides.border || borderFn(i),
       animation: overrides.anim || (result ? `tileReveal .3s ${i * 0.06}s both` : "none"),
       transition: "background .3s, border .3s",
     }}>
       <span style={{
         fontSize, fontWeight: 800, fontFamily: "monospace", textTransform: "uppercase",
-        color: overrides.color || color(i),
+        color: overrides.color || colorFn(i),
       }}>{ch}</span>
     </div>
   );
 
   return (
     <div style={{ textAlign: "center" }}>
-      {/* Main tiles */}
       <div style={{ display: "flex", justifyContent: "center", gap, flexWrap: "wrap", minHeight: tileSize + 8 }}>
         {letters.length === 0
-          ? word.split("").map((_, i) => tile("_", i, { bg: "#111118", border: "1px solid #222233", color: "#333", anim: "none" }))
+          ? word.split("").map((ch, i) =>
+              rev.has(i)
+                ? tile(ch, i, { bg: "#1a1a3a", border: "1px solid #6666AA66", color: "#8888CC", anim: "none" })
+                : tile("_", i, { bg: "#111118", border: "1px solid #222233", color: "#333", anim: "none" })
+            )
           : letters.map((ch, i) => tile(ch, i))
         }
       </div>
 
-      {/* Correct word shown below on wrong answer */}
       {result === "no" && (
         <div style={{ marginTop: 10 }}>
           <div style={{ fontSize: 10, color: "#AA666688", letterSpacing: 2, marginBottom: 4 }}>CORRECT SPELLING:</div>

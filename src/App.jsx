@@ -94,16 +94,19 @@ export default function App() {
 
   const battleWord = (w) => setEncWord(w);
 
-  const battleResult = (won) => {
+  const useForce = (cost) => setExForce((f) => Math.max(f - cost, 0));
+
+  const battleResult = (won, hinted = false) => {
     if (won) {
       setDefEnemies((p) => [...p, encWord]);
       const sc = calcScore(encWord, combo);
+      const pts = hinted ? Math.floor(sc.total / 2) : sc.total;
       const newCombo = combo + 1;
       setCombo(newCombo);
       if (!practiceMode) {
-        setExScore((s) => s + sc.total);
+        setExScore((s) => s + pts);
         upd({
-          totalScore: (profile?.totalScore || 0) + sc.total,
+          totalScore: (profile?.totalScore || 0) + pts,
           wordProgress: {
             ...(profile?.wordProgress || {}),
             [encWord]: ((profile?.wordProgress || {})[encWord] || 0) + 1,
@@ -216,7 +219,7 @@ export default function App() {
         return (
           <>
             <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5} combo={combo} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onExit={() => setScreen("galaxy")} />
-            {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} combo={combo} onResult={battleResult} />}
+            {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} combo={combo} force={exForce} onResult={battleResult} onForceUse={useForce} />}
             {showBoss && <BossBattle boss={b} pi={selPlanet - 1} words={w} planet={pl} profile={profile} onWin={bossWin} onLose={bossLose} />}
           </>
         );

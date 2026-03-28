@@ -10,6 +10,8 @@ import ForceMeter from "./ForceMeter";
 import WordTiles from "./WordTiles";
 import Keyboard from "./Keyboard";
 
+const VOWELS = new Set(["a", "e", "i", "o", "u"]);
+
 const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const [round, setRound] = useState(0);
   const [typed, setTyped] = useState("");
@@ -18,10 +20,12 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const [force, setForce] = useState(5);
   const [sk, setSk] = useState(0);
   const [phase, setPhase] = useState("intro");
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [revealed, setRevealed] = useState(new Set());
   // Visual FX states
-  const [bossAnim, setBossAnim] = useState("idle"); // idle | recoil | lunge | defeat
+  const [bossAnim, setBossAnim] = useState("idle");
   const [shake, setShake] = useState(false);
-  const [flash, setFlash] = useState(null); // null | "red" | "green"
+  const [flash, setFlash] = useState(null);
   const [sparks, setSparks] = useState([]);
   const [rings, setRings] = useState([]);
   const [taunt, setTaunt] = useState(null);
@@ -35,13 +39,29 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const cw = bw[round];
   const sn = useMemo(() => (cw ? sent(cw) : { masked: "", full: "" }), [cw]);
 
-  // Rage: 0 (full hp) → 1 (dead)
   const rage = 1 - hp / boss.hp;
   const bossSize = 60 + rage * 28;
   const bgRed = Math.round(rage * 40);
 
   const after = (fn, ms) => { const t = setTimeout(fn, ms); timers.current.push(t); return t; };
   useEffect(() => () => { timers.current.forEach(clearTimeout); if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  // Build display chars
+  const displayChars = useMemo(() => {
+    if (!cw) return [];
+    const arr = new Array(cw.length).fill("");
+    for (const i of revealed) arr[i] = cw[i].toLowerCase();
+    let ti = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (!revealed.has(i) && ti < typed.length) {
+        arr[i] = typed[ti];
+        ti++;
+      }
+    }
+    return arr;
+  }, [cw, revealed, typed]);
+
+  const maxTypeable = cw ? cw.length - revealed.size : 0;
 
   const triggerSparks = (count = 14, color = saber.c) => {
     const s = Array.from({ length: count }, (_, i) => ({
@@ -64,7 +84,6 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
   const doTaunt = () => { const t = bd.taunts[Math.floor(Math.random() * bd.taunts.length)]; setTaunt(t); after(() => setTaunt(null), 2200); };
   const doHitReact = () => { const t = bd.hitReactions[Math.floor(Math.random() * bd.hitReactions.length)]; setTaunt(t); after(() => setTaunt(null), 2000); };
 
-  // Phase: intro
   useEffect(() => {
     if (phase === "intro") {
       sfx("boss"); sfx("lightning");
@@ -72,17 +91,37 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
     }
   }, [phase]);
 
-  // Phase: fight — say word
   useEffect(() => {
     if (phase === "fight" && cw) {
       timerRef.current = after(() => { say(cw); inp.current?.focus(); }, 400);
     }
   }, [round, phase, cw]);
 
+  const useHint = () => {
+    if (result || phase !== "fight") return;
+    if (hintsUsed === 0) {
+      if (force < 1) return;
+      setForce((f) => f - 1);
+      setRevealed(new Set([0]));
+      setHintsUsed(1);
+      sfx("pip");
+    } else if (hintsUsed === 1) {
+      if (force < 1) return;
+      setForce((f) => f - 1);
+      const newRev = new Set(revealed);
+      for (let i = 0; i < cw.length; i++) {
+        if (VOWELS.has(cw[i].toLowerCase())) newRev.add(i);
+      }
+      setRevealed(newRev);
+      setHintsUsed(2);
+      sfx("pip");
+    }
+  };
+
   const submit = () => {
-    if (!typed.trim() || result || phase !== "fight") return;
-    if (typed.trim().toLowerCase() === cw.toLowerCase()) {
-      // ── CORRECT HIT ──
+    const attempt = displayChars.join("");
+    if (!attempt.trim() || result || phase !== "fight") return;
+    if (attempt === cw.toLowerCase()) {
       setResult("ok"); sfx("ok"); setShowSlash(true);
       setBossAnim("recoil"); doFlash("green"); triggerSparks(16); triggerRings(3); doHitReact();
       const nh = hp - 1; setHp(nh);
@@ -95,21 +134,37 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
           after(() => setPhase("win"), 1500);
         } else {
           setRound((r) => r + 1); setTyped(""); setResult(null);
+          setHintsUsed(0); setRevealed(new Set());
         }
       }, 1200);
     } else {
-      // ── MISS — BOSS ATTACKS ──
       setResult("no"); sfx("attack"); setSk((k) => k + 1);
       setBossAnim("lunge"); doShake(500); doFlash("red", 600); doTaunt();
       const nf = force - 1; setForce(nf);
       logSpellingAttempt(profile.username, cw, false, { level: profile.level, isBossBattle: true });
       after(() => setBossAnim("idle"), 700);
       if (nf <= 0) timerRef.current = after(() => setPhase("lose"), 1200);
-      else timerRef.current = after(() => { setTyped(""); setResult(null); inp.current?.focus(); }, 1800);
+      else timerRef.current = after(() => { setTyped(""); setResult(null); setHintsUsed(0); setRevealed(new Set()); inp.current?.focus(); }, 1800);
     }
   };
 
-  // ── Spark + Ring renderers ──
+  const handleKey = (k) => {
+    if (result || phase !== "fight") return;
+    if (typed.length < maxTypeable) setTyped((t) => t + k);
+    inp.current?.focus();
+  };
+
+  const handleDel = () => {
+    if (result || phase !== "fight") return;
+    setTyped((t) => t.slice(0, -1));
+  };
+
+  const handleInput = (e) => {
+    if (result || phase !== "fight") return;
+    setTyped(e.target.value.toLowerCase().slice(0, maxTypeable));
+  };
+
+  // Renderers
   const sparkEls = sparks.map((s) => {
     const rad = (s.angle * Math.PI) / 180;
     return <div key={s.id} style={{ position: "absolute", left: `calc(50% + ${Math.cos(rad) * s.dist}px)`, top: `calc(28% + ${Math.sin(rad) * s.dist}px)`, width: s.size, height: s.size, borderRadius: "50%", background: s.color, boxShadow: `0 0 ${s.size * 2}px ${s.color}`, animation: `sparkBurst ${s.dur}s ease-out forwards`, pointerEvents: "none", zIndex: 115 }} />;
@@ -118,7 +173,6 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
     <div key={r.id} style={{ position: "absolute", left: "50%", top: "28%", transform: "translate(-50%,-50%)", width: 60, height: 60, borderRadius: "50%", border: `3px solid ${r.color}`, boxShadow: `0 0 15px ${r.color}`, animation: `explosionRing .7s ${r.delay}s ease-out forwards`, opacity: 0, pointerEvents: "none", zIndex: 114 }} />
   ));
 
-  // ── Boss animation style ──
   const bossAnimStyle = bossAnim === "recoil"
     ? { animation: "bossRecoil .6s ease-out" }
     : bossAnim === "lunge"
@@ -127,12 +181,14 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
     ? { animation: "bossDefeatSpin 1.2s ease-in forwards" }
     : { animation: `bossPulse ${2 - rage}s ease-in-out infinite` };
 
+  const hintLabel = hintsUsed === 0 ? "💡 FIRST LETTER (-1⚡)" : hintsUsed === 1 ? "💡 VOWELS (-1⚡)" : null;
+  const canHint = !result && phase === "fight" && hintsUsed < 2 && force >= 1;
+
   // ── INTRO ──
   if (phase === "intro") return (
     <div style={{ position: "fixed", inset: 0, background: "#05050F", zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
       <Stars n={40} />
       <Nebula color="#EE4444" opacity={0.1} />
-      {/* Lightning bolts */}
       {[...Array(6)].map((_, i) => (
         <div key={i} style={{ position: "absolute", left: `${15 + Math.random() * 70}%`, top: 0, width: 2, height: `${30 + Math.random() * 40}%`, background: "linear-gradient(to bottom, #8888FF, #FFFFFF, #8888FF, transparent)", opacity: 0, animation: `lightningFlicker ${0.8 + Math.random() * 1.2}s ${Math.random() * 2}s infinite`, filter: "blur(1px)", zIndex: 5 }} />
       ))}
@@ -153,7 +209,6 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
       <Stars n={100} />
       <Nebula color="#FFE066" opacity={0.08} />
       <ForceParticles count={30} color="#FFE066" />
-      {/* Explosion rings */}
       {[...Array(5)].map((_, i) => (
         <div key={i} style={{ position: "absolute", left: "50%", top: "35%", transform: "translate(-50%,-50%)", width: 80, height: 80, borderRadius: "50%", border: `2px solid ${saber.c}`, animation: `explosionRing 1s ${i * 0.2}s ease-out forwards`, opacity: 0, pointerEvents: "none" }} />
       ))}
@@ -196,17 +251,11 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
       <Nebula color={rage > 0.5 ? "#EE4444" : planet.c} opacity={0.05 + rage * 0.08} />
       {rage > 0.6 && <ForceParticles count={10} color="#EE444488" />}
 
-      {/* Screen flash overlay */}
       {flash && <div style={{ position: "absolute", inset: 0, zIndex: 120, pointerEvents: "none", background: flash === "red" ? "#EE0000" : flash === "green" ? "#00EE00" : "#FFFFFF", animation: "flashOverlay .5s forwards" }} />}
-
-      {/* Saber slash */}
       {showSlash && <div style={{ position: "absolute", top: "25%", left: "50%", transform: "translateX(-50%)", width: 220, height: 5, borderRadius: 3, background: `linear-gradient(90deg, transparent, ${saber.c}, ${saber.c}, transparent)`, boxShadow: `0 0 25px ${saber.c}, 0 0 50px ${saber.g}`, animation: "saberSlash .5s forwards", zIndex: 116, pointerEvents: "none" }} />}
-
-      {/* Sparks + Rings */}
       {sparkEls}
       {ringEls}
 
-      {/* Boss taunt */}
       {taunt && <div style={{ position: "absolute", top: "18%", left: "50%", transform: "translateX(-50%)", zIndex: 115, background: "#1a0a0aEE", border: "1px solid #EE444466", borderRadius: 10, padding: "8px 18px", maxWidth: 300, textAlign: "center", animation: "tauntAppear 2s forwards", pointerEvents: "none" }}><div style={{ fontSize: 12, color: "#EE6666", fontWeight: 700, fontStyle: "italic" }}>"{taunt}"</div></div>}
 
       {/* HUD */}
@@ -228,17 +277,25 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose }) => {
 
       {/* Arena */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "10px 20px", position: "relative", zIndex: 10 }}>
-        {/* Boss with dynamic sizing + animation */}
         <div style={{ fontSize: bossSize, marginBottom: 12, filter: `drop-shadow(0 0 ${10 + rage * 20}px #EE4444${Math.round(50 + rage * 100).toString(16).padStart(2,"0")})`, transition: "font-size .3s, filter .3s", ...bossAnimStyle }}>{boss.icon}</div>
 
         <div style={{ fontSize: 15, color: "#AABB", textAlign: "center", maxWidth: 400, lineHeight: 1.6, marginBottom: 12 }}>{result === "ok" ? sn.full : sn.masked}</div>
-        <button onClick={() => say(cw)} style={{ marginBottom: 10, padding: "5px 14px", fontSize: 12, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
+
+        {/* Action buttons */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+          <button onClick={() => say(cw)} style={{ padding: "5px 14px", fontSize: 12, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
+          {hintLabel && (
+            <button onClick={useHint} disabled={!canHint} style={{ padding: "5px 14px", fontSize: 11, background: canHint ? "#FFE06615" : "#111", border: `1px solid ${canHint ? "#FFE06644" : "#222"}`, borderRadius: 6, color: canHint ? "#FFE066" : "#444", cursor: canHint ? "pointer" : "default" }}>{hintLabel}</button>
+          )}
+        </div>
+        {hintsUsed > 0 && !result && <div style={{ fontSize: 9, color: "#8888AA", marginBottom: 4 }}>Hints: {hintsUsed}/2</div>}
+
         <div key={sk} style={{ marginBottom: 8, animation: result === "no" ? "headShake .5s" : "none" }}>
-          <WordTiles typed={typed} word={cw} result={result} saber={saber} />
+          <WordTiles typed={displayChars.join("")} word={cw} result={result} saber={saber} revealed={revealed} />
         </div>
         {result && <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 8, color: result === "ok" ? "#44CC44" : "#EE4444", animation: "fadeSlideUp .3s" }}>{result === "ok" ? "✦ DIRECT HIT!" : "MISS!"}</div>}
-        <input ref={inp} type="text" value={typed} onChange={(e) => { if (!result) setTyped(e.target.value.toLowerCase()); }} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
-        <Keyboard onKey={(k) => { if (!result) { setTyped((t) => t + k); inp.current?.focus(); } }} onDel={() => { if (!result) setTyped((t) => t.slice(0, -1)); }} onSubmit={submit} typed={typed.trim()} result={result} saber={saber} />
+        <input ref={inp} type="text" value={typed} onChange={handleInput} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ position: "absolute", opacity: 0, pointerEvents: "none" }} autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" />
+        <Keyboard onKey={handleKey} onDel={handleDel} onSubmit={submit} typed={displayChars.join("").trim()} result={result} saber={saber} />
       </div>
     </div>
   );
