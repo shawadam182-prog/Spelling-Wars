@@ -32,6 +32,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, enemyHp = 
   const [flash, setFlash] = useState(null);
   const [sparks, setSparks] = useState([]);
   const [inputFocused, setInputFocused] = useState(true);
+  const [saberFlash, setSaberFlash] = useState(null);
   // Attempt tracking: max 3 per word
   const [attempt, setAttempt] = useState(1);
   const [hp, setHp] = useState(enemyHp);
@@ -126,6 +127,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, enemyHp = 
       setRevealed(new Set([0]));
       setHintsUsed(1);
       sfx("pip");
+      if (bonus.hintDiscount) { setSaberFlash("FREE HINT! (Purple Saber)"); after(() => setSaberFlash(null), 1500); }
     } else if (hintsUsed === 1) {
       if (force < hintCost) return;
       if (hintCost > 0) onForceUse?.(hintCost);
@@ -136,6 +138,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, enemyHp = 
       setRevealed(newRev);
       setHintsUsed(2);
       sfx("pip");
+      if (bonus.hintDiscount) { setSaberFlash("FREE HINT! (Purple Saber)"); after(() => setSaberFlash(null), 1500); }
     }
   };
 
@@ -301,6 +304,9 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, enemyHp = 
           {narrativeIntro && <div style={{ fontSize: 10, color: "#6666AA", fontStyle: "italic", marginTop: 4, lineHeight: 1.4 }}>{narrativeIntro}</div>}
         </HoloPanel>
       </div>
+
+      {/* Saber bonus flash */}
+      {saberFlash && <div style={{ position: "absolute", top: "12%", left: "50%", transform: "translateX(-50%)", zIndex: 115, padding: "6px 16px", borderRadius: 8, background: `${saber.c}22`, border: `1px solid ${saber.c}66`, color: saber.c, fontSize: 12, fontWeight: 700, letterSpacing: 1, animation: "fadeSlideUp .3s", pointerEvents: "none", whiteSpace: "nowrap" }}>{saberFlash}</div>}
 
       {/* ── DUEL SCENE ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 6, position: "relative" }}>

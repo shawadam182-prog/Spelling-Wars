@@ -70,8 +70,8 @@ export const calcScore = (word, combo, earlyCombo = false, elapsed = null) => {
 
 // ─── MAP GENERATION ─────────────────────────────────────────────────────────
 
-export const MAP_W = 12;
-export const MAP_H = 10;
+export const MAP_W = 14;
+export const MAP_H = 12;
 
 export const canReach = (grid, sx, sy, tx, ty) => {
   const h = grid.length, w = grid[0].length;
@@ -100,7 +100,7 @@ export const genMap = (pi, words) => {
   for (let attempt = 0; attempt < 12; attempt++) {
     const g = Array.from({ length: H }, () => Array(W).fill(1)); // all walls
     const rooms = [];
-    const target = 4 + Math.floor(Math.random() * 3); // 4-6 rooms
+    const target = 5 + Math.floor(Math.random() * 3); // 5-7 rooms
 
     // Try to place rooms with 1-tile padding between them
     for (let t = 0; t < target * 12 && rooms.length < target; t++) {
@@ -221,10 +221,11 @@ export const genMap = (pi, words) => {
     // Pickups spread across rooms
     placeIn("kyber", "💎", null, rooms[Math.min(1, rooms.length - 1)]);
     placeIn("kyber", "💎", null, rooms[Math.min(2, rooms.length - 1)]);
+    placeIn("kyber", "💎", null, rooms[Math.min(3, rooms.length - 1)]);
     placeIn("holocron", "📦", null, rooms[Math.floor(rooms.length / 2)]);
 
-    // Rations: 2-3 placed near harder rooms (middle/late rooms)
-    const rationCount = 2 + Math.floor(Math.random() * 2);
+    // Rations: 3-4 placed across middle/late rooms
+    const rationCount = 3 + Math.floor(Math.random() * 2);
     for (let r = 0; r < rationCount; r++) {
       const rm = rooms[Math.min(r + 1, rooms.length - 2)];
       placeIn("ration", "🍖", null, rm);
@@ -238,32 +239,37 @@ export const genMap = (pi, words) => {
     return { grid: g, entities: ents, spawn, rooms };
   }
 
-  // Fallback: simple three-room layout for 12x10
+  // Fallback: five-room layout for 14x12
   const g = Array.from({ length: H }, () => Array(W).fill(1));
-  // Room 1: left 4x3
-  for (let y = 6; y < 9; y++) for (let x = 1; x < 5; x++) g[y][x] = 0;
-  // Room 2: centre 4x3
-  for (let y = 3; y < 6; y++) for (let x = 4; x < 8; x++) g[y][x] = 0;
-  // Room 3: right 4x3
-  for (let y = 1; y < 4; y++) for (let x = 7; x < 11; x++) g[y][x] = 0;
-  // Corridors
-  for (let y = 4; y < 7; y++) g[y][4] = 0; // vertical: room1 to room2
-  for (let x = 7; x < 8; x++) g[3][x] = 0; // horizontal: room2 to room3
-  for (let y = 2; y < 4; y++) g[y][7] = 0; // vertical connector
+  const fRooms = [
+    { x: 1, y: 8, w: 4, h: 3 },   // Room 1: bottom-left (spawn)
+    { x: 1, y: 4, w: 4, h: 3 },   // Room 2: mid-left
+    { x: 5, y: 5, w: 4, h: 3 },   // Room 3: centre
+    { x: 9, y: 3, w: 4, h: 3 },   // Room 4: mid-right
+    { x: 9, y: 0, w: 4, h: 3 },   // Room 5: top-right (boss)
+  ];
+  for (const rm of fRooms) for (let dy = 0; dy < rm.h; dy++) for (let dx = 0; dx < rm.w; dx++) if (rm.y + dy < H && rm.x + dx < W) g[rm.y + dy][rm.x + dx] = 0;
+  // Corridors connecting rooms
+  for (let y = 7; y >= 4; y--) g[y][2] = 0; // Room1→Room2
+  for (let x = 4; x <= 5; x++) g[6][x] = 0; // Room2→Room3
+  for (let x = 8; x <= 9; x++) g[5][x] = 0; // Room3→Room4
+  for (let y = 3; y >= 1; y--) g[y][11] = 0; // Room4→Room5
 
-  const spawn = { x: 2, y: 7 };
-  const bossPos = { x: 9, y: 2 };
+  const spawn = { x: 2, y: 9 };
+  const bossPos = { x: 11, y: 1 };
   const ents = [];
   const occ = new Set([`${spawn.x},${spawn.y}`, `${bossPos.x},${bossPos.y}`]);
   words.forEach((w, i) => {
-    // Distribute enemies across the three rooms
-    let x, y;
-    if (i < 4) { x = 1 + (i % 4); y = 6 + Math.floor(i / 4); }
-    else if (i < 7) { x = 4 + ((i - 4) % 4); y = 3 + Math.floor((i - 4) / 4); }
-    else { x = 7 + ((i - 7) % 4); y = 1 + Math.floor((i - 7) / 4); }
-    if (g[y]?.[x] === 0 && !occ.has(`${x},${y}`)) {
-      occ.add(`${x},${y}`);
-      ents.push({ id: `enemy-${i}`, type: "enemy", x, y, emoji: pl.ee[i % pl.ee.length], word: w });
+    const rm = fRooms[1 + (i % (fRooms.length - 1))]; // skip spawn room
+    for (let a = 0; a < 30; a++) {
+      const x = rm.x + Math.floor(Math.random() * rm.w);
+      const y = rm.y + Math.floor(Math.random() * rm.h);
+      const k = `${x},${y}`;
+      if (g[y]?.[x] === 0 && !occ.has(k)) {
+        occ.add(k);
+        ents.push({ id: `enemy-${i}`, type: "enemy", x, y, emoji: pl.ee[i % pl.ee.length], word: w });
+        break;
+      }
     }
   });
   ents.push({ id: "boss", type: "boss", x: bossPos.x, y: bossPos.y, emoji: BOSSES[pi].icon, word: null });

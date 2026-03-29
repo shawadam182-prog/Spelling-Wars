@@ -20,6 +20,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
   const [wallChallenge, setWallChallenge] = useState(null); // { x, y, word }
   const [wcTyped, setWcTyped] = useState("");
   const [wcResult, setWcResult] = useState(null);
+  const [totalEnemies, setTotalEnemies] = useState(0);
   const saber = getSaber(profile.lightsaberColor);
   const bonus = saberBonus(profile.lightsaberColor);
 
@@ -53,6 +54,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
     const d = genMap(pi, words);
     setMap(d);
     setEnts(d.entities);
+    setTotalEnemies(d.entities.filter((e) => e.type === "enemy").length);
     const sp = d.spawn || { x: 0, y: MAP_H - 1 };
     setPos(sp);
     posRef.current = sp;
@@ -63,9 +65,9 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
     setEnts((prev) => prev.filter((e) => !(e.type === "enemy" && defeated.includes(e.word))));
   }, [defeated, map]);
 
-  const total = words.length;
+  const total = totalEnemies;
   const def = defeated.length;
-  const bossOk = def >= total;
+  const bossOk = total > 0 && def >= total;
 
   const showMsg = useCallback((text, duration = 800) => {
     if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
@@ -241,7 +243,10 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
           <span>Enemies: <b style={{ color: def >= total ? "#44CC44" : "#FFE066" }}>{def}/{total}</b></span>
           <span>Kyber: <b style={{ color: "#66CCFF" }}>{profile.kyberCrystals}</b></span>
           {combo >= 2 && <span style={{ color: "#FFE066", fontWeight: 700, animation: "planetPulse 1s infinite" }}>🔥 {combo}x</span>}
-          {bonus.id !== "blue" && <span style={{ color: saber.c, fontSize: 10 }}>{bonus.desc}</span>}
+          {bonus.id === "green" && <span style={{ color: saber.c, fontSize: 10, fontWeight: 700 }}>🍖+1 RATIONS</span>}
+          {bonus.id === "purple" && <span style={{ color: saber.c, fontSize: 10, fontWeight: 700 }}>💡 FREE HINTS</span>}
+          {bonus.id === "yellow" && <span style={{ color: saber.c, fontSize: 10, fontWeight: 700 }}>🔥 EARLY COMBO</span>}
+          {bonus.id === "white" && <span style={{ color: saber.c, fontSize: 10, fontWeight: 700 }}>⚡+1 🔥 COMBO</span>}
           {bossOk && <span style={{ color: "#EE6666", animation: "planetPulse 1.5s infinite" }}>✦ BOSS UNLOCKED</span>}
         </div>
         {force <= 2 && <div style={{ fontSize: 10, color: "#EE4444", letterSpacing: 1, marginTop: 4, animation: "planetPulse 1s infinite", textAlign: "center" }}>⚠ FORCE CRITICALLY LOW ⚠</div>}

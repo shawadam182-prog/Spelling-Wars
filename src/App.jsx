@@ -115,7 +115,7 @@ export default function App() {
     // Later levels get more starting Force; White saber adds +1
     const lvl = selPlanet || profile.level;
     const bonus = saberBonus(profile.lightsaberColor);
-    const baseForce = lvl >= 7 ? 8 : lvl >= 4 ? 6 : 5;
+    const baseForce = lvl >= 7 ? 10 : lvl >= 4 ? 8 : 7;
     setExForce(baseForce + (bonus.extraMaxForce || 0));
     setCombo(0);
     setNoDamageTaken(true);
@@ -158,8 +158,16 @@ export default function App() {
           },
         });
       }
-      // Combo 5+ restores +1 Force
-      if (newCombo >= 5) setExForce((f) => Math.min(f + 1, 10));
+      // Clean first-attempt correct (no hints, no zero-points): restore +1 Force
+      const lvl = selPlanet || profile.level;
+      const maxF = (lvl >= 7 ? 8 : lvl >= 4 ? 6 : 5) + (bonus.extraMaxForce || 0);
+      if (!hinted && !zeroPoints) setExForce((f) => Math.min(f + 1, maxF));
+      // Combo 5+ restores additional +1 Force
+      if (newCombo >= 5) setExForce((f) => Math.min(f + 1, maxF));
+      // Elite enemy kill: +1 Kyber crystal
+      if (encEntity?.isElite && !practiceMode) {
+        upd({ kyberCrystals: (profile?.kyberCrystals || 0) + 1 });
+      }
       // Check combo achievements
       if (!zeroPoints) {
         const comboEarned = checkComboAchievement(newCombo, profile.unlockedAchievements || []);
