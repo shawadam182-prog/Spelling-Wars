@@ -37,11 +37,11 @@ export const planetMastery = (profile, words) => {
 
 // Saber passive bonuses
 const SABER_BONUSES = [
-  { id: "blue", desc: "Balanced — no bonus" },
-  { id: "green", desc: "Rations restore +1 extra Force", extraRation: 1 },
-  { id: "purple", desc: "Hint costs halved", hintDiscount: true },
-  { id: "yellow", desc: "Combo kicks in 1 step earlier", earlyCombo: true },
-  { id: "white", desc: "+1 max Force, combo builds faster", extraMaxForce: 1, earlyCombo: true },
+  { id: "blue", desc: "Balanced — no special bonus" },
+  { id: "green", desc: "Rations give +2 Force instead of +1!", extraRation: 1 },
+  { id: "purple", desc: "All hints are FREE — no Force cost!", hintDiscount: true },
+  { id: "yellow", desc: "Combo bonus starts 1 step earlier!", earlyCombo: true },
+  { id: "white", desc: "+1 max Force AND earlier combos!", extraMaxForce: 1, earlyCombo: true },
 ];
 export const saberBonus = (i) => SABER_BONUSES[i] || SABER_BONUSES[0];
 
@@ -70,8 +70,8 @@ export const calcScore = (word, combo, earlyCombo = false, elapsed = null) => {
 
 // ─── MAP GENERATION ─────────────────────────────────────────────────────────
 
-export const MAP_W = 14;
-export const MAP_H = 12;
+export const MAP_W = 12;
+export const MAP_H = 10;
 
 export const canReach = (grid, sx, sy, tx, ty) => {
   const h = grid.length, w = grid[0].length;
@@ -100,7 +100,7 @@ export const genMap = (pi, words) => {
   for (let attempt = 0; attempt < 12; attempt++) {
     const g = Array.from({ length: H }, () => Array(W).fill(1)); // all walls
     const rooms = [];
-    const target = 5 + Math.floor(Math.random() * 3); // 5-7 rooms
+    const target = 4 + Math.floor(Math.random() * 3); // 4-6 rooms
 
     // Try to place rooms with 1-tile padding between them
     for (let t = 0; t < target * 12 && rooms.length < target; t++) {
@@ -239,24 +239,22 @@ export const genMap = (pi, words) => {
     return { grid: g, entities: ents, spawn, rooms };
   }
 
-  // Fallback: five-room layout for 14x12
+  // Fallback: four-room layout for 12x10
   const g = Array.from({ length: H }, () => Array(W).fill(1));
   const fRooms = [
-    { x: 1, y: 8, w: 4, h: 3 },   // Room 1: bottom-left (spawn)
-    { x: 1, y: 4, w: 4, h: 3 },   // Room 2: mid-left
-    { x: 5, y: 5, w: 4, h: 3 },   // Room 3: centre
-    { x: 9, y: 3, w: 4, h: 3 },   // Room 4: mid-right
-    { x: 9, y: 0, w: 4, h: 3 },   // Room 5: top-right (boss)
+    { x: 1, y: 7, w: 3, h: 2 },   // Room 1: bottom-left (spawn)
+    { x: 1, y: 3, w: 3, h: 3 },   // Room 2: mid-left
+    { x: 5, y: 3, w: 3, h: 3 },   // Room 3: centre
+    { x: 9, y: 1, w: 2, h: 3 },   // Room 4: top-right (boss)
   ];
   for (const rm of fRooms) for (let dy = 0; dy < rm.h; dy++) for (let dx = 0; dx < rm.w; dx++) if (rm.y + dy < H && rm.x + dx < W) g[rm.y + dy][rm.x + dx] = 0;
   // Corridors connecting rooms
-  for (let y = 7; y >= 4; y--) g[y][2] = 0; // Room1→Room2
-  for (let x = 4; x <= 5; x++) g[6][x] = 0; // Room2→Room3
-  for (let x = 8; x <= 9; x++) g[5][x] = 0; // Room3→Room4
-  for (let y = 3; y >= 1; y--) g[y][11] = 0; // Room4→Room5
+  for (let y = 5; y <= 7; y++) g[y][2] = 0; // Room1→Room2
+  for (let x = 3; x <= 5; x++) g[4][x] = 0; // Room2→Room3
+  for (let x = 7; x <= 9; x++) g[3][x] = 0; // Room3→Room4
 
-  const spawn = { x: 2, y: 9 };
-  const bossPos = { x: 11, y: 1 };
+  const spawn = { x: 2, y: 8 };
+  const bossPos = { x: 9, y: 2 };
   const ents = [];
   const occ = new Set([`${spawn.x},${spawn.y}`, `${bossPos.x},${bossPos.y}`]);
   words.forEach((w, i) => {

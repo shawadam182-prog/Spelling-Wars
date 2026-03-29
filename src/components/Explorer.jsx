@@ -177,7 +177,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
         onCollect("kyber", 2);
         setEnts((p) => p.filter((e) => e.id !== ent.id));
         const km = PLANET_NARRATIVE[pi].kyberMsgs;
-        showMsg(`💎 ${km[Math.floor(Math.random() * km.length)]} +2 Kyber Crystals!`, 2500);
+        showMsg(`💎 ${km[Math.floor(Math.random() * km.length)]} +2 Kyber Crystals! Spend them at the ⚔ Lightsaber Armory!`, 3500);
       } else if (ent.type === "holocron") {
         sfx("pip");
         const hc = PLANET_NARRATIVE[pi].holocrons;

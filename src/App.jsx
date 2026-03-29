@@ -160,7 +160,7 @@ export default function App() {
       }
       // Clean first-attempt correct (no hints, no zero-points): restore +1 Force
       const lvl = selPlanet || profile.level;
-      const maxF = (lvl >= 7 ? 8 : lvl >= 4 ? 6 : 5) + (bonus.extraMaxForce || 0);
+      const maxF = (lvl >= 7 ? 10 : lvl >= 4 ? 8 : 7) + (bonus.extraMaxForce || 0);
       if (!hinted && !zeroPoints) setExForce((f) => Math.min(f + 1, maxF));
       // Combo 5+ restores additional +1 Force
       if (newCombo >= 5) setExForce((f) => Math.min(f + 1, maxF));
@@ -196,7 +196,9 @@ export default function App() {
       // Green saber: rations restore +1 extra
       const bonus = saberBonus(profile.lightsaberColor);
       const restore = 1 + (bonus.extraRation || 0);
-      setExForce((f) => Math.min(f + restore, 10));
+      const lvl = selPlanet || profile.level;
+      const maxF = (lvl >= 7 ? 10 : lvl >= 4 ? 8 : 7) + (bonus.extraMaxForce || 0);
+      setExForce((f) => Math.min(f + restore, maxF));
       return;
     }
     if (practiceMode) return;
@@ -231,7 +233,7 @@ export default function App() {
     });
     setShowBoss(false);
     // Check achievements after boss win
-    const maxF = (selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5) + (saberBonus(profile.lightsaberColor).extraMaxForce || 0);
+    const maxF = (selPlanet >= 7 ? 10 : selPlanet >= 4 ? 8 : 7) + (saberBonus(profile.lightsaberColor).extraMaxForce || 0);
     const postProfile = { ...profile, level: nl, planetsCompleted: comp, kyberCrystals: (profile.kyberCrystals || 0) + 5, totalScore: (profile.totalScore || 0) + 500, unlockedAchievements: profile.unlockedAchievements || [] };
     const earned = checkAchievements(postProfile);
     // Force-based achievements
@@ -345,7 +347,7 @@ export default function App() {
         const pl = PLANETS[selPlanet - 1], b = BOSSES[selPlanet - 1], w = troubleWordList || LW[selPlanet - 1] || LW[0];
         return (
           <>
-            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={(selPlanet >= 7 ? 8 : selPlanet >= 4 ? 6 : 5) + (saberBonus(profile.lightsaberColor).extraMaxForce || 0)} combo={combo} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onForceUse={useForce} onExit={() => setScreen("galaxy")} />
+            <Explorer planet={pl} pi={selPlanet - 1} words={w} boss={b} profile={profile} score={exScore} force={exForce} maxForce={(selPlanet >= 7 ? 10 : selPlanet >= 4 ? 8 : 7) + (saberBonus(profile.lightsaberColor).extraMaxForce || 0)} combo={combo} defeated={defEnemies} onBattle={battleWord} onBoss={bossStart} onCollect={collect} onForceUse={useForce} onExit={() => setScreen("galaxy")} />
             {encWord && <Encounter word={encWord} planet={pl} pi={selPlanet - 1} profile={profile} combo={combo} force={exForce} enemyHp={encEntity?.isElite ? (encEntity.hp || 2) : 1} onResult={battleResult} onForceUse={useForce} />}
             {showBoss && <BossBattle boss={b} pi={selPlanet - 1} words={w} planet={pl} profile={profile} force={exForce} onWin={bossWin} onLose={bossLose} />}
           </>
@@ -366,7 +368,7 @@ export default function App() {
               <h1 style={{ fontSize: 34, fontWeight: 900, color: "#FFE066", letterSpacing: 4, textShadow: "0 0 40px #FFE06644" }}>{practiceMode ? "PRACTICE COMPLETE" : "MISSION COMPLETE"}</h1>
               <p style={{ fontSize: 13, color: "#AABB", marginTop: 10, maxWidth: 380, lineHeight: 1.6, fontStyle: "italic" }}>{PLANET_NARRATIVE[selPlanet - 1]?.victoryLine}</p>
               {!practiceMode && <p style={{ fontSize: 20, color: "#FFE066", fontFamily: "monospace", marginTop: 16 }}>Score: {profile?.totalScore?.toLocaleString()}</p>}
-              {!practiceMode && <p style={{ fontSize: 13, color: "#66CCFF", marginTop: 6 }}>+5 Kyber Crystals earned!</p>}
+              {!practiceMode && <p style={{ fontSize: 13, color: "#66CCFF", marginTop: 6 }}>+5 💎 Kyber Crystals earned! Use them at the ⚔ Lightsaber Armory!</p>}
               {practiceMode && <p style={{ fontSize: 13, color: "#44AA44", marginTop: 12 }}>Great practice session!</p>}
               <button onClick={() => setScreen("galaxy")} style={{ marginTop: 24, padding: "12px 32px", fontSize: 15, fontWeight: 700, letterSpacing: 3, background: "#FFE06615", border: "1px solid #FFE06644", borderRadius: 8, color: "#FFE066", cursor: "pointer" }}>▸ CONTINUE</button>
             </div>

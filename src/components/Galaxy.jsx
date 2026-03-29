@@ -39,8 +39,8 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAc
             <div style={{ fontSize: 9, color: "#666688", letterSpacing: 1 }}>SCORE</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 16, color: "#66CCFF", fontWeight: 700, fontFamily: "monospace" }}>{profile.kyberCrystals}</div>
-            <div style={{ fontSize: 9, color: "#666688", letterSpacing: 1 }}>KYBER</div>
+            <div style={{ fontSize: 16, color: "#66CCFF", fontWeight: 700, fontFamily: "monospace" }}>💎 {profile.kyberCrystals}</div>
+            <div style={{ fontSize: 9, color: "#666688", letterSpacing: 1 }}>KYBER CRYSTALS</div>
           </div>
           <MuteBtn />
           <button onClick={onLogout} style={{ background: "none", border: "1px solid #333", borderRadius: 6, color: "#666", fontSize: 10, padding: "3px 8px", cursor: "pointer" }}>LOG OUT</button>

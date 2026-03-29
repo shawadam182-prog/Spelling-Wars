@@ -13,7 +13,11 @@ const SaberPicker = ({ profile, onSelect, onClose }) => {
       <HoloPanel color="#FFE066" style={{ padding: 24, maxWidth: 400, width: "90%", textAlign: "center" }}>
         <div style={{ fontSize: 10, color: "#FFE06666", letterSpacing: 3, marginBottom: 4 }}>LIGHTSABER</div>
         <h2 style={{ fontSize: 22, fontWeight: 800, color: "#FFE066", margin: "0 0 6px", letterSpacing: 2 }}>ARMORY</h2>
-        <div style={{ fontSize: 11, color: "#666", marginBottom: 16 }}>Kyber Crystals: <b style={{ color: "#66CCFF" }}>{profile.kyberCrystals}</b></div>
+        <div style={{ fontSize: 11, color: "#666", marginBottom: 8 }}>Kyber Crystals: <b style={{ color: "#66CCFF" }}>💎 {profile.kyberCrystals}</b></div>
+        <div style={{ fontSize: 10, color: "#8888AA", marginBottom: 16, lineHeight: 1.5, padding: "6px 10px", background: "#0A0A1A88", borderRadius: 6, border: "1px solid #1a1a2e" }}>
+          Collect 💎 Kyber Crystals on missions to unlock new lightsabers.<br />
+          Each saber gives a <b style={{ color: "#FFE066" }}>unique gameplay bonus</b> during battles!
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {SABERS.map((s, i) => {
             const isOwned = owned.includes(i);

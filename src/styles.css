@@ -167,7 +167,8 @@
 
 /* ── Base styles ── */
 * { box-sizing: border-box; }
-body { margin: 0; padding: 0; background: #05050F; }
+body { margin: 0; padding: 0; background: #05050F; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+#root { min-height: 100vh; }
 input::placeholder { color: #33335588; }
 button { font-family: 'Segoe UI', system-ui, sans-serif; }
 ::-webkit-scrollbar { width: 6px; }
