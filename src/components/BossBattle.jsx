@@ -9,6 +9,8 @@ import ForceParticles from "./ForceParticles";
 import ForceMeter from "./ForceMeter";
 import WordTiles from "./WordTiles";
 import Keyboard from "./Keyboard";
+import HoloPanel from "./HoloPanel";
+import ShipSilhouettes from "./ShipSilhouettes";
 
 const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 
@@ -223,6 +225,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: pa
     <div style={{ position: "fixed", inset: 0, background: "#05050F", zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
       <Stars n={40} />
       <Nebula color="#EE4444" opacity={0.1} />
+      <ShipSilhouettes types={["starDestroyer"]} count={1} opacity={0.06} color="#EE666644" />
       {[...Array(6)].map((_, i) => (
         <div key={i} style={{ position: "absolute", left: `${15 + Math.random() * 70}%`, top: 0, width: 2, height: `${30 + Math.random() * 40}%`, background: "linear-gradient(to bottom, #8888FF, #FFFFFF, #8888FF, transparent)", opacity: 0, animation: `lightningFlicker ${0.8 + Math.random() * 1.2}s ${Math.random() * 2}s infinite`, filter: "blur(1px)", zIndex: 5 }} />
       ))}
@@ -293,7 +296,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: pa
       {taunt && <div style={{ position: "absolute", top: "18%", left: "50%", transform: "translateX(-50%)", zIndex: 115, background: "#1a0a0aEE", border: "1px solid #EE444466", borderRadius: 10, padding: "8px 18px", maxWidth: 300, textAlign: "center", animation: "tauntAppear 2s forwards", pointerEvents: "none" }}><div style={{ fontSize: 12, color: "#EE6666", fontWeight: 700, fontStyle: "italic" }}>"{taunt}"</div></div>}
 
       {/* HUD */}
-      <div style={{ position: "relative", zIndex: 10, padding: "12px 16px", borderBottom: "1px solid #2a1a1a" }}>
+      <HoloPanel color="#EE4444" intensity="subtle" borderRadius={0} style={{ position: "relative", zIndex: 10, padding: "12px 16px", borderBottom: "1px solid #2a1a1a" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div style={{ fontSize: 12, color: "#EE6666", fontWeight: 700, letterSpacing: 1 }}>{boss.icon} {boss.name.toUpperCase()}</div>
           <div style={{ fontSize: 12, color: "#888" }}>Words: {completed.length}/{boss.hp}</div>
@@ -318,7 +321,7 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: pa
         </div>
         <ForceMeter cur={force} max={bossMaxForce} saberIdx={profile.lightsaberColor} />
         {dangerLow && <div style={{ fontSize: 10, color: "#EE4444", letterSpacing: 1, marginTop: 4, animation: "planetPulse 1s infinite", textAlign: "center" }}>⚠ FORCE CRITICALLY LOW ⚠</div>}
-      </div>
+      </HoloPanel>
 
       {/* Arena */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "10px 20px", position: "relative", zIndex: 10 }}>

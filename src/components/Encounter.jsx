@@ -6,6 +6,7 @@ import { logSpellingAttempt } from "../services/supabase.js";
 import ForceParticles from "./ForceParticles";
 import WordTiles from "./WordTiles";
 import Keyboard from "./Keyboard";
+import HoloPanel from "./HoloPanel";
 
 const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 
@@ -289,7 +290,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, enemyHp = 
 
       {/* ── ENEMY INFO PANEL ── */}
       <div style={{ width: "100%", maxWidth: 420, padding: "0 16px", marginBottom: 6 }}>
-        <div style={{ background: "#0a0a1a88", border: "1px solid #EE444433", borderRadius: 8, padding: "6px 12px" }}>
+        <HoloPanel color="#EE4444" intensity="subtle" style={{ padding: "6px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
             <div style={{ fontSize: 13, color: planet.c, fontWeight: 700, letterSpacing: 1 }}>{enEmoji.current} {enRef.current}</div>
             <div style={{ fontSize: 11, color: "#AA6666", fontFamily: "monospace" }}>{hp}/{enemyHp} HP</div>
@@ -298,7 +299,7 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, enemyHp = 
             <div style={{ height: "100%", width: `${(hp / enemyHp) * 100}%`, borderRadius: 3, background: "linear-gradient(90deg, #EE444488, #EE4444)", transition: "width .3s" }} />
           </div>
           {narrativeIntro && <div style={{ fontSize: 10, color: "#6666AA", fontStyle: "italic", marginTop: 4, lineHeight: 1.4 }}>{narrativeIntro}</div>}
-        </div>
+        </HoloPanel>
       </div>
 
       {/* ── DUEL SCENE ── */}
@@ -315,12 +316,12 @@ const Encounter = ({ word, planet, pi, profile, combo = 0, force = 5, enemyHp = 
 
       {/* ── PLAYER INFO ── */}
       <div style={{ width: "100%", maxWidth: 420, padding: "0 16px", marginBottom: 6 }}>
-        <div style={{ background: "#0a0a1a88", border: `1px solid ${saber.c}33`, borderRadius: 8, padding: "6px 12px" }}>
+        <HoloPanel color={saber.c} intensity="subtle" style={{ padding: "6px 12px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ fontSize: 12, color: saber.c, fontWeight: 700 }}>🥷 {profile.username?.toUpperCase() || "JEDI"}</div>
             <div style={{ fontSize: 11, color: saber.c, fontFamily: "monospace" }}>{force}⚡</div>
           </div>
-        </div>
+        </HoloPanel>
       </div>
 
       {/* Sentence — hidden in audio mode, unmasked in scramble */}

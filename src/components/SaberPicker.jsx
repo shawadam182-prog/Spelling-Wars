@@ -1,6 +1,8 @@
 import { SABERS, SABER_COSTS } from "../data/constants.js";
 import { sfx } from "../utils/audio.js";
 import { saberBonus } from "../utils/helpers.js";
+import HoloPanel from "./HoloPanel";
+import Lightsaber from "./Lightsaber";
 
 const SaberPicker = ({ profile, onSelect, onClose }) => {
   const owned = profile.unlockedSabers || [0];
@@ -8,7 +10,7 @@ const SaberPicker = ({ profile, onSelect, onClose }) => {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#05050FEE", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", animation: "slideIn .3s" }}>
-      <div style={{ background: "#0A0A1A", border: "1px solid #2a2a4a", borderRadius: 16, padding: 24, maxWidth: 380, width: "90%", textAlign: "center" }}>
+      <HoloPanel color="#FFE066" style={{ padding: 24, maxWidth: 400, width: "90%", textAlign: "center" }}>
         <div style={{ fontSize: 10, color: "#FFE06666", letterSpacing: 3, marginBottom: 4 }}>LIGHTSABER</div>
         <h2 style={{ fontSize: 22, fontWeight: 800, color: "#FFE066", margin: "0 0 6px", letterSpacing: 2 }}>ARMORY</h2>
         <div style={{ fontSize: 11, color: "#666", marginBottom: 16 }}>Kyber Crystals: <b style={{ color: "#66CCFF" }}>{profile.kyberCrystals}</b></div>
@@ -25,11 +27,9 @@ const SaberPicker = ({ profile, onSelect, onClose }) => {
                 border: `1px solid ${isCurrent ? s.c + "66" : "#1a1a3a"}`,
                 borderRadius: 10, transition: "all .2s",
               }}>
-                <div style={{
-                  width: 6, height: 36, borderRadius: 3,
-                  background: `linear-gradient(to bottom, ${s.c}, ${s.c}88)`,
-                  boxShadow: `0 0 8px ${s.g}`,
-                }} />
+                <div style={{ flexShrink: 0 }}>
+                  <Lightsaber color={s.c} glow={s.g} size={50} />
+                </div>
                 <div style={{ flex: 1, textAlign: "left" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: s.c }}>{s.name}</div>
                   <div style={{ fontSize: 10, color: "#8888AA", marginTop: 1 }}>{saberBonus(i).desc}</div>
@@ -49,7 +49,7 @@ const SaberPicker = ({ profile, onSelect, onClose }) => {
           })}
         </div>
         <button onClick={onClose} style={{ marginTop: 16, padding: "8px 24px", fontSize: 12, background: "none", border: "1px solid #333", borderRadius: 8, color: "#888", cursor: "pointer", letterSpacing: 1 }}>CLOSE</button>
-      </div>
+      </HoloPanel>
     </div>
   );
 };

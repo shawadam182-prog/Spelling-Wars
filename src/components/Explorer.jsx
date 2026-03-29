@@ -8,6 +8,7 @@ import ForceParticles from "./ForceParticles";
 import MuteBtn from "./MuteBtn";
 import ForceMeter from "./ForceMeter";
 import Keyboard from "./Keyboard";
+import HoloPanel from "./HoloPanel";
 
 const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, combo = 0, defeated, onBattle, onBoss, onCollect, onForceUse, onExit }) => {
   const [pos, setPos] = useState({ x: 0, y: MAP_H - 1 });
@@ -282,7 +283,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
       {/* Wall Challenge Popup */}
       {wallChallenge && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "#12122A", border: `1px solid ${saber.c}44`, borderRadius: 12, padding: "20px 24px", maxWidth: 360, textAlign: "center", animation: "fadeSlideUp .3s" }}>
+          <HoloPanel color={saber.c} style={{ padding: "20px 24px", maxWidth: 360, textAlign: "center", animation: "fadeSlideUp .3s" }}>
             <div style={{ fontSize: 11, color: saber.c, letterSpacing: 2, marginBottom: 6 }}>⚔ CUT THE WALL</div>
             <div style={{ fontSize: 13, color: "#CCCCDD", marginBottom: 12 }}>Spell the word to slice through!</div>
             <button onClick={() => { say(wallChallenge.word); refocusWcInput(); }} style={{ marginBottom: 10, padding: "5px 14px", fontSize: 11, background: "#4A9EEA15", border: "1px solid #4A9EEA44", borderRadius: 6, color: "#4A9EEA", cursor: "pointer" }}>🔊 HEAR WORD</button>
@@ -307,7 +308,7 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
               autoFocus autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
             />
             {!wcResult && <Keyboard onKey={(k) => { if (!wcResult) { setWcTyped((t) => t + k); refocusWcInput(); } }} onDel={() => { if (!wcResult) setWcTyped((t) => t.slice(0, -1)); }} onSubmit={submitWallChallenge} typed={wcTyped.trim()} result={wcResult} saber={saber} word={wallChallenge?.word} />}
-          </div>
+          </HoloPanel>
         </div>
       )}
     </div>

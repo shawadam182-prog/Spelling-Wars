@@ -6,6 +6,8 @@ import Stars from "./Stars";
 import Nebula from "./Nebula";
 import ForceParticles from "./ForceParticles";
 import MuteBtn from "./MuteBtn";
+import HoloPanel from "./HoloPanel";
+import ShipSilhouettes from "./ShipSilhouettes";
 
 const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAchievements, onDaily, onScanner }) => {
   const [hov, setHov] = useState(null);
@@ -22,6 +24,7 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAc
       <Stars n={160} />
       <Nebula color="#4A9EEA" color2="#9944CC" opacity={0.05} />
       <ForceParticles count={12} color="#FFE06622" />
+      <ShipSilhouettes types={["xwing", "tieFighter", "starDestroyer"]} count={4} opacity={0.03} />
       <div style={{ position: "relative", zIndex: 10, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1a1a2e" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: `radial-gradient(circle,${saber.c}33,transparent)`, border: `2px solid ${saber.c}66`, fontSize: 16 }}>{rank.icon}</div>
@@ -63,7 +66,7 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAc
                 {done && !cur && <div style={{ fontSize: 8, color: "#44AA44" }}>PRACTICE</div>}
               </div>
               {h && (unlk || done) && (
-                <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 10, padding: "8px 12px", borderRadius: 8, background: "#12122A", border: "1px solid #2a2a4a", boxShadow: "0 4px 20px rgba(0,0,0,.6)", whiteSpace: "nowrap", minWidth: 170, textAlign: "center", zIndex: 30 }}>
+                <HoloPanel color={pl.c} intensity="subtle" style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 10, padding: "8px 12px", boxShadow: "0 4px 20px rgba(0,0,0,.6)", whiteSpace: "nowrap", minWidth: 170, textAlign: "center", zIndex: 30 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: pl.c, letterSpacing: 1 }}>{pl.name}</div>
                   <div style={{ fontSize: 10, color: "#8888AA", fontStyle: "italic", margin: "3px 0" }}>"{pl.desc}"</div>
                   <div style={{ fontSize: 9, color: "#666688" }}>{LW[i]?.length} words — Boss: {bossData.icon} {bossData.name}</div>
@@ -78,7 +81,7 @@ const Galaxy = ({ profile, onSelect, onLogout, onSaberPick, onTroubleWords, onAc
                     </div>;
                   })()}
                   <div style={{ marginTop: 4, fontSize: 10, fontWeight: 600, color: done && !cur ? "#44AA44" : cur ? "#FFE066" : "#44AA44", padding: "2px 8px", borderRadius: 4, background: done && !cur ? "#44AA4415" : cur ? "#FFE06615" : "#44AA4415" }}>{done && !cur ? "✦ PRACTICE MODE" : done ? "✦ COMPLETED" : "▸ TAP TO LAUNCH"}</div>
-                </div>
+                </HoloPanel>
               )}
             </div>
           );

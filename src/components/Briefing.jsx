@@ -2,11 +2,81 @@ import { useState, useEffect } from "react";
 import { PLANET_NARRATIVE } from "../data/narratives.js";
 import { getSaber } from "../utils/helpers.js";
 import Stars from "./Stars";
+import HoloPanel from "./HoloPanel";
 
 const Briefing = ({ planet, pi, boss, words, profile, isPractice, onStart, onBack }) => {
+  const [phase, setPhase] = useState("crawl"); // crawl -> briefing
   const [show, setShow] = useState(false);
   const saber = getSaber(profile.lightsaberColor);
-  useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t); }, []);
+
+  useEffect(() => {
+    // Auto-advance from crawl to briefing after 10s
+    if (phase === "crawl") {
+      const t = setTimeout(() => setPhase("briefing"), 10000);
+      return () => clearTimeout(t);
+    }
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === "briefing") {
+      const t = setTimeout(() => setShow(true), 100);
+      return () => clearTimeout(t);
+    }
+  }, [phase]);
+
+  // ── CRAWL PHASE ──
+  if (phase === "crawl") {
+    return (
+      <div style={{ minHeight: "100vh", background: "#05050F", position: "relative", overflow: "hidden" }}>
+        <Stars n={80} />
+        {/* Perspective container for the crawl */}
+        <div style={{
+          position: "absolute", inset: 0,
+          perspective: "350px",
+          perspectiveOrigin: "50% 100%",
+          overflow: "hidden",
+        }}>
+          <div style={{
+            position: "absolute",
+            top: "100%",
+            left: "12%", right: "12%",
+            transformOrigin: "50% 100%",
+            transform: "rotateX(22deg)",
+            animation: "crawlScroll 18s linear forwards",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: 12, letterSpacing: 4, color: "#4A9EEA", marginBottom: 30 }}>
+              {isPractice ? "PRACTICE MISSION" : "MISSION BRIEFING"}
+            </div>
+            <h2 style={{ fontSize: 36, fontWeight: 900, color: "#FFE066", letterSpacing: 4, margin: "0 0 20px", textShadow: "0 0 20px #FFE06644" }}>
+              {planet.name.toUpperCase()}
+            </h2>
+            <p style={{ fontSize: 18, color: "#FFE066CC", lineHeight: 2, textAlign: "justify", maxWidth: 500, margin: "0 auto 30px" }}>
+              {PLANET_NARRATIVE[pi]?.missionBrief || planet.desc}
+            </p>
+            <div style={{ fontSize: 14, color: "#FFE06688", letterSpacing: 2 }}>
+              BOSS: {boss.icon} {boss.name.toUpperCase()}
+            </div>
+            <p style={{ fontSize: 15, color: "#EE666688", fontStyle: "italic", marginTop: 16, maxWidth: 400, margin: "16px auto" }}>
+              "{boss.q}"
+            </p>
+            <div style={{ fontSize: 13, color: "#FFE06666", letterSpacing: 1, marginTop: 30 }}>
+              {words.length} WORDS TO MASTER
+            </div>
+          </div>
+        </div>
+        {/* Skip button */}
+        <button onClick={() => setPhase("briefing")} style={{
+          position: "absolute", bottom: 24, right: 24, zIndex: 20,
+          padding: "8px 18px", fontSize: 12, letterSpacing: 2,
+          background: "#ffffff08", border: "1px solid #ffffff22", borderRadius: 6,
+          color: "#888", cursor: "pointer",
+        }}>SKIP ▸</button>
+      </div>
+    );
+  }
+
+  // ── BRIEFING PHASE ──
   return (
     <div style={{ minHeight: "100vh", background: "#05050F", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
       <Stars n={80} />
@@ -17,7 +87,7 @@ const Briefing = ({ planet, pi, boss, words, profile, isPractice, onStart, onBac
         <p style={{ fontSize: 13, color: "#8888AA", fontStyle: "italic", margin: "0 0 12px" }}>"{planet.desc}"</p>
         {PLANET_NARRATIVE[pi]?.missionBrief && <p style={{ fontSize: 12, color: "#AABB", lineHeight: 1.7, margin: "0 0 16px", padding: "10px 14px", background: "#0A0A1A88", borderLeft: `2px solid ${planet.c}44`, borderRadius: 4 }}>{PLANET_NARRATIVE[pi].missionBrief}</p>}
         {isPractice && <div style={{ fontSize: 11, color: "#44AA44", background: "#44AA4415", padding: "4px 12px", borderRadius: 4, display: "inline-block", marginBottom: 12 }}>Practice — no rank or score changes</div>}
-        <div style={{ background: "#0A0A1A", border: "1px solid #1a1a3a", borderRadius: 12, padding: 18, textAlign: "left" }}>
+        <HoloPanel color={planet.c} style={{ padding: 18, textAlign: "left" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div><div style={{ fontSize: 9, color: "#556", letterSpacing: 1.5 }}>WORDS</div><div style={{ fontSize: 20, color: "#FFE066", fontWeight: 700, fontFamily: "monospace" }}>{words.length}</div></div>
             <div><div style={{ fontSize: 9, color: "#556", letterSpacing: 1.5 }}>BOSS</div><div style={{ fontSize: 14, color: "#EE6666", fontWeight: 600, marginTop: 2 }}>{boss.icon} {boss.name}</div></div>
@@ -31,7 +101,7 @@ const Briefing = ({ planet, pi, boss, words, profile, isPractice, onStart, onBac
               })}
             </div>
           </div>
-        </div>
+        </HoloPanel>
         <div style={{ display: "flex", gap: 10, marginTop: 18, justifyContent: "center" }}>
           <button onClick={onBack} style={{ padding: "10px 18px", fontSize: 12, background: "none", border: "1px solid #333", borderRadius: 8, color: "#666", cursor: "pointer" }}>◂ BACK</button>
           <button onClick={onStart} style={{ padding: "10px 28px", fontSize: 14, fontWeight: 700, letterSpacing: 3, background: `linear-gradient(135deg,${saber.c}33,${saber.c}11)`, border: `1px solid ${saber.c}66`, borderRadius: 8, color: "#FFE066", cursor: "pointer" }}>▸ ENGAGE</button>
