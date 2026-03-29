@@ -54,6 +54,15 @@ const Briefing = ({ planet, pi, boss, words, profile, isPractice, onStart, onBac
             <p style={{ fontSize: 18, color: "#FFE066CC", lineHeight: 2, textAlign: "justify", maxWidth: 500, margin: "0 auto 30px" }}>
               {PLANET_NARRATIVE[pi]?.missionBrief || planet.desc}
             </p>
+            {boss.imgs?.intro ? (
+              <div style={{ margin: "20px auto", width: 100, height: 100 }}>
+                <img src={boss.imgs.intro} alt={boss.name} style={{
+                  width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%",
+                  border: "2px solid #EE444466",
+                  boxShadow: "0 0 30px #EE444444, 0 0 60px #EE444422",
+                }} />
+              </div>
+            ) : null}
             <div style={{ fontSize: 14, color: "#FFE06688", letterSpacing: 2 }}>
               BOSS: {boss.icon} {boss.name.toUpperCase()}
             </div>
@@ -90,7 +99,12 @@ const Briefing = ({ planet, pi, boss, words, profile, isPractice, onStart, onBac
         <HoloPanel color={planet.c} style={{ padding: 18, textAlign: "left" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div><div style={{ fontSize: 9, color: "#556", letterSpacing: 1.5 }}>WORDS</div><div style={{ fontSize: 20, color: "#FFE066", fontWeight: 700, fontFamily: "monospace" }}>{words.length}</div></div>
-            <div><div style={{ fontSize: 9, color: "#556", letterSpacing: 1.5 }}>BOSS</div><div style={{ fontSize: 14, color: "#EE6666", fontWeight: 600, marginTop: 2 }}>{boss.icon} {boss.name}</div></div>
+            <div><div style={{ fontSize: 9, color: "#556", letterSpacing: 1.5 }}>BOSS</div>{boss.imgs?.fight ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                <img src={boss.imgs.fight} alt={boss.name} style={{ width: 32, height: 32, objectFit: "cover", borderRadius: "50%", border: "1px solid #EE444466" }} />
+                <div style={{ fontSize: 14, color: "#EE6666", fontWeight: 600 }}>{boss.name}</div>
+              </div>
+            ) : <div style={{ fontSize: 14, color: "#EE6666", fontWeight: 600, marginTop: 2 }}>{boss.icon} {boss.name}</div>}</div>
           </div>
           <div style={{ borderTop: "1px solid #1a1a2e", paddingTop: 12 }}>
             <div style={{ fontSize: 9, color: "#556", letterSpacing: 1.5, marginBottom: 6 }}>TARGET WORDS</div>

@@ -31,9 +31,9 @@ export const PLANETS = [
 ];
 
 export const BOSSES = [
-  { id: 1, name: "Darth Maul", icon: "👹", hp: 3, q: "At last we will reveal ourselves..." },
-  { id: 2, name: "Count Dooku", icon: "⚡", hp: 3, q: "I've become more powerful than any Jedi" },
-  { id: 3, name: "General Grievous", icon: "🤖", hp: 3, q: "Your lightsabers will make a fine addition" },
+  { id: 1, name: "Darth Maul", icon: "👹", hp: 3, q: "At last we will reveal ourselves...", imgs: { intro: "/bosses/DartM3.png", fight: "/bosses/DarthM2.png", defeat: "/bosses/DarthM1.png" } },
+  { id: 2, name: "Count Dooku", icon: "⚡", hp: 3, q: "I've become more powerful than any Jedi", imgs: { intro: "/bosses/Dooku2.png", fight: "/bosses/Doku1.png", defeat: "/bosses/doku3.png" } },
+  { id: 3, name: "General Grievous", icon: "🤖", hp: 3, q: "Your lightsabers will make a fine addition", imgs: { intro: "/bosses/GG1.png", fight: "/bosses/GG3.png", defeat: "/bosses/GG2.png" } },
   { id: 4, name: "Boba Fett", icon: "🪖", hp: 3, q: "He's no good to me dead" },
   { id: 5, name: "Jabba's Rancor", icon: "👾", hp: 4, q: "RAAAWWRR!" },
   { id: 6, name: "The Inquisitor", icon: "🔴", hp: 4, q: "There are things more frightening than death" },

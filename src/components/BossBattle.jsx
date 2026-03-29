@@ -14,6 +14,30 @@ import ShipSilhouettes from "./ShipSilhouettes";
 
 const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 
+const BossPortrait = ({ src, fallbackIcon, size = 120, glow = "#EE4444", anim }) => {
+  if (!src) return <div style={{ fontSize: size * 0.7, ...anim }}>{fallbackIcon}</div>;
+  return (
+    <div style={{ position: "relative", width: size, height: size, ...anim }}>
+      <div style={{
+        position: "absolute", inset: -8, borderRadius: "50%",
+        background: `radial-gradient(circle, ${glow}44 0%, transparent 70%)`,
+        animation: "bossPulse 2s ease-in-out infinite",
+      }} />
+      <img src={src} alt="Boss" style={{
+        width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%",
+        border: `3px solid ${glow}88`,
+        boxShadow: `0 0 30px ${glow}66, 0 0 60px ${glow}33, inset 0 0 20px ${glow}22`,
+        filter: "contrast(1.1) brightness(0.9)",
+      }} />
+      <div style={{
+        position: "absolute", inset: 0, borderRadius: "50%",
+        background: `radial-gradient(circle at 50% 120%, ${glow}44 0%, transparent 60%)`,
+        pointerEvents: "none",
+      }} />
+    </div>
+  );
+};
+
 const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: parentForce }) => {
   // Queue-based word system: failed words go back to end of queue
   const allWords = useMemo(() => [...words].sort(() => Math.random() - 0.5).slice(0, boss.hp), [words, boss.hp]);
@@ -229,8 +253,10 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: pa
       {[...Array(6)].map((_, i) => (
         <div key={i} style={{ position: "absolute", left: `${15 + Math.random() * 70}%`, top: 0, width: 2, height: `${30 + Math.random() * 40}%`, background: "linear-gradient(to bottom, #8888FF, #FFFFFF, #8888FF, transparent)", opacity: 0, animation: `lightningFlicker ${0.8 + Math.random() * 1.2}s ${Math.random() * 2}s infinite`, filter: "blur(1px)", zIndex: 5 }} />
       ))}
-      <div style={{ position: "relative", zIndex: 10, textAlign: "center", animation: "bossEntrance 1.2s" }}>
-        <div style={{ fontSize: 90, marginBottom: 16, filter: `drop-shadow(0 0 30px ${planet.c}) drop-shadow(0 0 60px #EE444444)` }}>{boss.icon}</div>
+      <div style={{ position: "relative", zIndex: 10, textAlign: "center", animation: "bossEntrance 1.2s", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ marginBottom: 16, filter: `drop-shadow(0 0 30px ${planet.c}) drop-shadow(0 0 60px #EE444444)` }}>
+          <BossPortrait src={boss.imgs?.intro} fallbackIcon={boss.icon} size={160} glow="#EE4444" />
+        </div>
         <div style={{ fontSize: 10, color: "#EE666688", letterSpacing: 4 }}>SITH LORD</div>
         <h1 style={{ fontSize: 34, fontWeight: 900, color: "#EE4444", letterSpacing: 4, margin: "8px 0", textShadow: "0 0 30px #EE444466, 0 0 60px #EE444422" }}>{boss.name.toUpperCase()}</h1>
         <p style={{ fontSize: 15, color: "#EE666688", fontStyle: "italic", maxWidth: 320, margin: "0 auto" }}>"{boss.q}"</p>
@@ -250,7 +276,13 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: pa
         <div key={i} style={{ position: "absolute", left: "50%", top: "35%", transform: "translate(-50%,-50%)", width: 80, height: 80, borderRadius: "50%", border: `2px solid ${saber.c}`, animation: `explosionRing 1s ${i * 0.2}s ease-out forwards`, opacity: 0, pointerEvents: "none" }} />
       ))}
       <div style={{ position: "relative", zIndex: 10, textAlign: "center" }}>
-        <div style={{ fontSize: 56, marginBottom: 16, animation: "planetFloat 2s infinite", filter: "drop-shadow(0 0 20px #FFE066)" }}>✦</div>
+        {boss.imgs?.defeat ? (
+          <div style={{ marginBottom: 16, animation: "planetFloat 2s infinite", filter: "drop-shadow(0 0 20px #FFE066)", opacity: 0.4 }}>
+            <BossPortrait src={boss.imgs.defeat} fallbackIcon={boss.icon} size={100} glow="#FFE066" />
+          </div>
+        ) : (
+          <div style={{ fontSize: 56, marginBottom: 16, animation: "planetFloat 2s infinite", filter: "drop-shadow(0 0 20px #FFE066)" }}>✦</div>
+        )}
         <h1 style={{ fontSize: 38, fontWeight: 900, color: "#FFE066", letterSpacing: 4, textShadow: "0 0 30px #FFE06644, 0 0 60px #FFE06622" }}>{boss.name.toUpperCase()}</h1>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: "#44CC44", letterSpacing: 3, margin: "4px 0", textShadow: "0 0 20px #44CC4444" }}>DEFEATED!</h2>
         <p style={{ fontSize: 13, color: "#EE666688", fontStyle: "italic", marginTop: 10, maxWidth: 320 }}>"{bd.defeatQuote}"</p>
@@ -266,7 +298,9 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: pa
       <Stars n={30} />
       <Nebula color="#EE4444" opacity={0.15} />
       <div style={{ position: "relative", zIndex: 10, textAlign: "center" }}>
-        <div style={{ fontSize: 80, marginBottom: 16, filter: "drop-shadow(0 0 30px #EE444466)", animation: "bossPulse 1.5s infinite" }}>{boss.icon}</div>
+        <div style={{ marginBottom: 16, filter: "drop-shadow(0 0 30px #EE444466)" }}>
+          <BossPortrait src={boss.imgs?.fight} fallbackIcon={boss.icon} size={140} glow="#EE4444" anim={{ animation: "bossPulse 1.5s infinite" }} />
+        </div>
         <h1 style={{ fontSize: 36, fontWeight: 900, color: "#EE4444", letterSpacing: 4, textShadow: "0 0 30px #EE444444, 0 0 60px #EE444422" }}>THE DARK SIDE PREVAILS</h1>
         <p style={{ fontSize: 14, color: "#AA6666", marginTop: 10 }}>"{boss.q}"</p>
         <p style={{ fontSize: 13, color: "#888", marginTop: 12 }}>Boss HP remaining: {hp}/{boss.hp}</p>
@@ -325,7 +359,9 @@ const BossBattle = ({ boss, pi, words, planet, profile, onWin, onLose, force: pa
 
       {/* Arena */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "10px 20px", position: "relative", zIndex: 10 }}>
-        <div style={{ fontSize: bossSize, marginBottom: 12, filter: `drop-shadow(0 0 ${10 + rage * 20}px #EE4444${Math.round(50 + rage * 100).toString(16).padStart(2,"0")})`, transition: "font-size .3s, filter .3s", ...bossAnimStyle }}>{boss.icon}</div>
+        <div style={{ marginBottom: 12, filter: `drop-shadow(0 0 ${10 + rage * 20}px #EE4444${Math.round(50 + rage * 100).toString(16).padStart(2,"0")})`, transition: "filter .3s", ...bossAnimStyle }}>
+          <BossPortrait src={boss.imgs?.fight} fallbackIcon={boss.icon} size={bossSize + 40} glow={`#EE4444`} />
+        </div>
 
         {isRetry && !result && <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 3, color: "#FFE066", marginBottom: 4, animation: "fadeSlideUp .3s" }}>RETRY!</div>}
         <div style={{ fontSize: 15, color: "#AABB", textAlign: "center", maxWidth: 400, lineHeight: 1.6, marginBottom: 12 }}>{result === "ok" ? sn.full : sn.masked}</div>
