@@ -203,7 +203,10 @@ const Explorer = ({ planet, pi, words, boss, profile, score, force, maxForce, co
 
   useEffect(() => {
     const h = (e) => {
-      if (wallChallenge) return; // disable movement during wall challenge
+      if (wallChallenge) return;
+      // Don't intercept keys when an input/textarea has focus (encounter, wall challenge, etc.)
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
       const k = e.key;
       if (k === "ArrowUp" || k === "w") { e.preventDefault(); move(0, -1); }
       if (k === "ArrowDown" || k === "s") { e.preventDefault(); move(0, 1); }
