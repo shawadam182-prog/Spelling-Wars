@@ -12,7 +12,7 @@ const Briefing = ({ planet, pi, boss, words, profile, isPractice, onStart, onBac
   useEffect(() => {
     // Auto-advance from crawl to briefing after 10s
     if (phase === "crawl") {
-      const t = setTimeout(() => setPhase("briefing"), 10000);
+      const t = setTimeout(() => setPhase("briefing"), 20000);
       return () => clearTimeout(t);
     }
   }, [phase]);
@@ -42,7 +42,7 @@ const Briefing = ({ planet, pi, boss, words, profile, isPractice, onStart, onBac
             left: "12%", right: "12%",
             transformOrigin: "50% 100%",
             transform: "rotateX(22deg)",
-            animation: "crawlScroll 18s linear forwards",
+            animation: "crawlScroll 35s linear forwards",
             textAlign: "center",
           }}>
             <div style={{ fontSize: 12, letterSpacing: 4, color: "#4A9EEA", marginBottom: 30 }}>

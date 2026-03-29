@@ -186,7 +186,7 @@ button { font-family: 'Segoe UI', system-ui, sans-serif; }
 /* ── Star Wars opening crawl ── */
 @keyframes crawlScroll {
   0% { top: 100%; }
-  100% { top: -280%; }
+  100% { top: -180%; }
 }
 
 /* ── Title card reveal (Star Wars style) ── */
